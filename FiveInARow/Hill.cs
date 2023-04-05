@@ -41,9 +41,15 @@ namespace FiveInARow
         {
             string path = Path.Combine(Defined.ModelDirectory, "hill.bin");
             if (File.Exists(path))
+            {
                 m_NeuralNetwork = NeuralNetwork.LoadFrom(path);
+                Console.WriteLine("load nn model at: " + path);
+            }
             else
+            {
                 ClearMemory();
+                Console.WriteLine("create new nn model");
+            }
         }
         public void SaveMemory()
         {

@@ -4,9 +4,20 @@ namespace FiveInARow
 {
     internal static class Program
     {
+        public static bool UseLogFile;
+
         [STAThread]
         private static void Main(string[] args)
         {
+            for (int i = 0; i < args.Length; i++)
+            {
+                string argument = args[i];
+                if (argument.ToLowerInvariant().StartsWith("-model="))
+                {
+                    Defined.ModelDirectory = argument.Substring("-model=".Length);
+                }
+            }
+            Console.WriteLine($"-model={Defined.ModelDirectory}");
             //HumanPlayWithSilly();
             //SillyPlayWithHill();
             SillyTrainHill();
