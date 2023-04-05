@@ -42,10 +42,6 @@ namespace FiveInARow
             m_LogBuilder.Clear();
             gameLogic.ConvertToLogFormat(m_LogBuilder);
             Console.WriteLine(m_LogBuilder.ToString());
-            ConsoleColor oldColor = Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"winner: {gameLogic.Winner}");
-            Console.ForegroundColor = oldColor;
         }
     }
 }

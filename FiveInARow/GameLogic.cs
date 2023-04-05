@@ -30,12 +30,25 @@ namespace FiveInARow
 
         public bool GameEnd { get; private set; }
         public ChessType Winner { get; private set; }
+        public List<Vector2Int> ChessRecords { get; private set; }
+        public event Action OneTurnFinish_Handle;
 
         public GameLogic()
         {
             Chessboard = new ChessType[Defined.Height, Defined.Width];
             GameEnd = false;
             Winner = ChessType.Empty;
+            ChessRecords = new List<Vector2Int>();
+        }
+
+        public IController ToOpponent(IController currentPlayer)
+        {
+            if (currentPlayer == BlackChessPlayer)
+                return WhiteChessPlayer;
+            else if (currentPlayer == WhiteChessPlayer)
+                return BlackChessPlayer;
+            else
+                throw new Exception(nameof(currentPlayer));
         }
 
         public void PlayToEnd()
@@ -44,10 +57,10 @@ namespace FiveInARow
             int playTurnCount = 0;
             while (!GameEnd && playTurnCount++ < Defined.Size)
             {
-                if (currentPlayer == BlackChessPlayer)
-                    currentPlayer = WhiteChessPlayer;
-                else
+                if (currentPlayer == null)
                     currentPlayer = BlackChessPlayer;
+                else
+                    currentPlayer = ToOpponent(currentPlayer);
                 currentPlayer.Play(this, out Vector2Int position);
                 if (position.Y < 0 || position.Y > Chessboard.GetLength(0) ||
                     position.X < 0 || position.X > Chessboard.GetLength(1))
@@ -59,12 +72,14 @@ namespace FiveInARow
                     throw new Exception($"{currentPlayer} want to replace chess {Chessboard[position.Y, position.X]} at {position.X}, {position.Y}");
                 }
                 Chessboard[position.Y, position.X] = currentPlayer.ChessType;
+                ChessRecords.Add(position);
 
                 if (XYFiveInARow(position) || SlopeFiveInARow(position))
                 {
                     GameEnd = true;
                     Winner = currentPlayer.ChessType;
                 }
+                OneTurnFinish_Handle?.Invoke();
             }
             BlackChessPlayer.GameEnd(this);
             WhiteChessPlayer.GameEnd(this);
@@ -170,7 +185,7 @@ namespace FiveInARow
                     else if (type == aiChessType)
                         t = Defined.AIChessValue;
                     else
-                        t = Defined.HumanChessValue;
+                        t = Defined.OpponentChessValue;
                     value[row * Defined.Width + column] = t;
                 }
             }
@@ -197,6 +212,27 @@ namespace FiveInARow
                 }
                 stringBuilder.AppendLine();
             }
+        }
+        internal void Copy(GameLogic gameLogic)
+        {
+            for (int row = 0; row < Chessboard.GetLength(0); row++)
+                for (int column = 0; column < Chessboard.GetLength(1); column++)
+                    Chessboard[row, column] = gameLogic.Chessboard[row, column];
+            m_BlackChessPlayer = gameLogic.m_BlackChessPlayer;
+            m_WhiteChessPlayer = gameLogic.m_WhiteChessPlayer;
+            GameEnd = gameLogic.GameEnd;
+            Winner = gameLogic.Winner;
+            ChessRecords.Clear();
+            ChessRecords.AddRange(gameLogic.ChessRecords);
+        }
+        internal void Repentance(out Vector2Int lastChessPosition, out ChessType chessType)
+        {
+            if (ChessRecords.Count == 0)
+                throw new Exception();
+            lastChessPosition = ChessRecords[ChessRecords.Count - 1];
+            ChessRecords.RemoveAt(ChessRecords.Count - 1);
+            chessType = Chessboard[lastChessPosition.Y, lastChessPosition.X];
+            Chessboard[lastChessPosition.Y, lastChessPosition.X] = ChessType.Empty;
         }
     }
 }
