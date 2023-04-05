@@ -10,6 +10,7 @@ namespace FiveInARow
         public const float BelieveRuleAllow = 0.1f;
 
         public ChessType ChessType { get; set; }
+        public float LastLoss;
         private NeuralNetwork m_NeuralNetwork;
         private List<Vector2Int> m_PositionList;
         private Random m_Random;
@@ -34,8 +35,19 @@ namespace FiveInARow
             sequential.Add(Sequential.Neural("hidden layer", 500));
             sequential.Add(Sequential.Activation("sigmoid link", ActivationsFunctionType.Sigmoid));
             sequential.Add(Sequential.Neural("output layer", Defined.Size));
-
             m_NeuralNetwork = new NeuralNetwork(Defined.Size, new int[] { 500, 500, 500 }, Defined.Size);
+        }
+        public void TryRecallOrClearMemory()
+        {
+            string path = Path.Combine(Defined.ModelDirectory, "hill.bin");
+            if (File.Exists(path))
+                m_NeuralNetwork = NeuralNetwork.LoadFrom(path);
+            else
+                ClearMemory();
+        }
+        public void SaveMemory()
+        {
+            m_NeuralNetwork.SaveTo(Path.Combine(Defined.ModelDirectory, "hill.bin"));
         }
 
         public void Play(GameLogic gameLogic, out Vector2Int position)
@@ -94,6 +106,8 @@ namespace FiveInARow
 
             float[] opponentPerspective = m_Notebook.ConvertToNNFormat(opponentChessType);
             float[] hillEvaluation = m_NeuralNetwork.Forward(opponentPerspective);
+            float[] hillEvaluationCopy = new float[hillEvaluation.Length];
+            Array.Copy(hillEvaluation, hillEvaluationCopy, hillEvaluation.Length);
             for (int i = 0; i < hillEvaluation.Length; i++)
             {
                 // check this position is allowed by game rule
@@ -106,6 +120,7 @@ namespace FiveInARow
                 }
             }
             hillEvaluation[opponentChessPosition.Y * Defined.Width + opponentChessPosition.X] = fixedValue;
+            LastLoss = LossFuntion.MSELoss(hillEvaluationCopy, hillEvaluation);
             m_NeuralNetwork.OptimizerBackward(hillEvaluation);
             m_NeuralNetwork.OptimizerStep();
         }

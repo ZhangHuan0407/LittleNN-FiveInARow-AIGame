@@ -139,7 +139,7 @@ namespace FiveInARow
                 else
                     break;
             }
-            for (x = position.X - 1, y = position.Y - 1; x > 0 && y > 0; x--, y--)
+            for (x = position.X - 1, y = position.Y - 1; x >= 0 && y >= 0; x--, y--)
             {
                 if (Chessboard[y, x] == chessType)
                     count++;
@@ -151,14 +151,14 @@ namespace FiveInARow
                 return true;
 
             count = 0;
-            for (x = position.X + 1, y = position.Y - 1; x < Chessboard.GetLength(1) && y > 0; x++, y--)
+            for (x = position.X + 1, y = position.Y - 1; x < Chessboard.GetLength(1) && y >= 0; x++, y--)
             {
                 if (Chessboard[y, x] == chessType)
                     count++;
                 else
                     break;
             }
-            for (x = position.X - 1, y = position.Y + 1; x > 0 && y < Chessboard.GetLength(0); x--, y++)
+            for (x = position.X - 1, y = position.Y + 1; x >= 0 && y < Chessboard.GetLength(0); x--, y++)
             {
                 if (Chessboard[y, x] == chessType)
                     count++;

@@ -58,22 +58,32 @@ namespace FiveInARow
             Console.WriteLine("SillyTrainHill");
             Silly silly = new Silly();
             Hill hill = new Hill();
-            hill.ClearMemory();
-            for (int i = 0; i < 5 * 1000; i++)
+            hill.TryRecallOrClearMemory();
+            int savePoint = 0;
+            for (int i = 0; i < 100 * 1000; i++)
             {
                 GameLogic gameLogic = new GameLogic();
                 gameLogic.BlackChessPlayer = silly;
                 gameLogic.WhiteChessPlayer = hill;
                 gameLogic.PlayToEnd();
 
-                if (i % 400 == 399)
+                if (i % 300 == 299 && i > savePoint)
+                {
+                    hill.SaveMemory();
+                    savePoint += 15 * 1000;
+                    Console.Clear();
+                }
+
+                if (i % 300 == 299)
                 {
                     StringBuilder stringBuilder = new StringBuilder();
                     gameLogic.ConvertToLogFormat(stringBuilder);
                     Console.WriteLine(stringBuilder);
-                    Console.WriteLine($"winner: {gameLogic.Winner}");
+                    Console.WriteLine($"winner: {gameLogic.Winner}, {hill.LastLoss}");
+                    Console.WriteLine(i);
                 }
             }
+            hill.SaveMemory();
             Console.WriteLine("train finish");
             Console.ReadLine();
         }
@@ -91,16 +101,15 @@ namespace FiveInARow
                 gameLogic.WhiteChessPlayer = whiteHill;
                 gameLogic.PlayToEnd();
 
-                if (i % 200 == 199 && i % (5 * 1000) == 0)
-                {
+                if (i % 200 == 199 && i % 200 % 50 == 0)
                     Console.Clear();
-                }
                 if (i % 200 == 199)
                 {
                     StringBuilder stringBuilder = new StringBuilder();
                     gameLogic.ConvertToLogFormat(stringBuilder);
                     Console.WriteLine(stringBuilder);
                     Console.WriteLine($"winner: {gameLogic.Winner}");
+                    Console.WriteLine(i);
                 }
             }
             Console.WriteLine("train finish");
