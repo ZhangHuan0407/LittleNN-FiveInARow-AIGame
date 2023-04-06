@@ -14,9 +14,26 @@ namespace FiveInARow
         private static void Main(string[] args)
         {
             ReadArguments(args);
-            //SillyTest();
-            SillyTestTrainHill();
-            //SillyPlayWithHill();
+            //WoodenManTrainSilly();
+            //SillyPlayWithSilly();
+
+            Silly whiteSilly = new Silly(true);
+            whiteSilly.TryRecall();
+            GameLogic gameLogic = new GameLogic()
+            {
+                BlackChessPlayer = new HumanPlayer(),
+                WhiteChessPlayer = whiteSilly,
+            };
+            gameLogic.OneTurnFinish_Handle += () =>
+            {
+                StringBuilder stringBuilder = new StringBuilder();
+                if (gameLogic.ToOpponent(gameLogic.CurrentPlayer) is Silly silly)
+                    silly.LogEvaluation(gameLogic, stringBuilder);
+                Console.WriteLine(stringBuilder.ToString());
+            };
+            gameLogic.PlayToEnd();
+            Console.ReadLine();
+            Console.ReadLine();
         }
 
         private static void ReadArguments(string[] args)
@@ -24,7 +41,7 @@ namespace FiveInARow
             if (Environment.UserInteractive)
             {
                 Infinite = false;
-                // guess you are running in project
+                // guess you are running in visual studio
                 Defined.ModelDirectory = "../../../Model";
             }
             else
@@ -32,6 +49,9 @@ namespace FiveInARow
                 Infinite = true;
                 Defined.ModelDirectory = "./";
             }
+            if (!Directory.Exists(Defined.ModelDirectory))
+                throw new DirectoryNotFoundException(Defined.ModelDirectory);
+            
             for (int i = 0; i < args.Length; i++)
             {
                 string argument = args[i];
@@ -47,56 +67,26 @@ namespace FiveInARow
             Console.WriteLine($"-model={Defined.ModelDirectory}");
             Console.WriteLine($"-infinite={Infinite}");
         }
-        private static void SillyTest()
-        {
-            Silly blackSilly = new Silly();
-            Silly whiteSilly = new Silly();
-            StringBuilder stringBuilder = new StringBuilder();
-            using (Stream stream = new FileStream("SillyTest.txt", FileMode.Create, FileAccess.Write))
-            {
-                foreach (var wrapper in Silly.EnumAll5InARowPattern())
-                {
-                    Vector2Int[] blackPositions = wrapper.Item1;
-                    Vector2Int[] whitePositions = wrapper.Item2;
-
-                    GameLogic gameLogic = new GameLogic();
-                    gameLogic.BlackChessPlayer = blackSilly;
-                    blackSilly.Positions = blackPositions;
-                    gameLogic.WhiteChessPlayer = whiteSilly;
-                    whiteSilly.Positions = whitePositions;
-                    gameLogic.PlayToEnd();
-                    stringBuilder.Clear();
-                    gameLogic.ConvertToLogFormat(stringBuilder);
-                    byte[] bytes = Encoding.UTF8.GetBytes(stringBuilder.ToString());
-                    stream.Write(bytes, 0, bytes.Length);
-                }
-            }
-            Console.WriteLine("finish");
-        }
-        private static void SillyTestTrainHill()
+        private static void WoodenManTrainSilly()
         {
             Console.WriteLine("SillyTestTrainHill");
-            Silly silly = new Silly();
-            Hill hill = new Hill(false);
-            hill.TryRecallOrClearMemory();
+            Silly hill = new Silly(false);
+            hill.TryRecall();
 
-            Silly blackSilly = new Silly();
-            Silly whiteSilly = new Silly();
-            int max = Infinite ? int.MaxValue : 200;
+            WoodenMan blackWoodenMan = new WoodenMan();
+            WoodenMan whiteWoodenMan = new WoodenMan();
+            int max = Infinite ? int.MaxValue : 300;
             for (int i = 0; i < max; i++)
             {
                 float lossTotal = 0f;
                 int trainCount = 0;
-                foreach (var wrapper in Silly.EnumAll5InARowPattern())
+                foreach ((Vector2Int[] blackPositions, Vector2Int[] whitePositions) wrapper in WoodenMan.EnumAll5InARowPattern())
                 {
-                    Vector2Int[] blackPositions = wrapper.Item1;
-                    Vector2Int[] whitePositions = wrapper.Item2;
-
                     GameLogic gameLogic = new GameLogic();
-                    gameLogic.BlackChessPlayer = blackSilly;
-                    blackSilly.Positions = blackPositions;
-                    gameLogic.WhiteChessPlayer = whiteSilly;
-                    whiteSilly.Positions = whitePositions;
+                    gameLogic.BlackChessPlayer = blackWoodenMan;
+                    blackWoodenMan.Positions = wrapper.blackPositions;
+                    gameLogic.WhiteChessPlayer = whiteWoodenMan;
+                    whiteWoodenMan.Positions = wrapper.whitePositions;
                     gameLogic.OneTurnFinish_Handle += () =>
                     {
                         // Learn white chess only and ignore white chess first step
@@ -111,43 +101,41 @@ namespace FiveInARow
                     };
                     gameLogic.PlayToEnd();
                 }
-                if (i % 50 == 49 || Environment.UserInteractive)
+                if (i % 50 == 49)
                 {
                     Console.WriteLine($"{i}, {DateTime.Now}, average loss: {lossTotal / trainCount}");
                     hill.SaveMemory();
                 }
             }
             hill.SaveMemory();
-
-            //StringBuilder stringBuilder = new StringBuilder();
-            //for (int i = 0; i < lossAverageRecords.Count; i++)
-            //    stringBuilder.Append(i + 1).Append(',');
-            //stringBuilder.Length -= 1;
-            //stringBuilder.AppendLine();
-            //for (int i = 0; i < lossAverageRecords.Count; i++)
-            //    stringBuilder.Append(lossAverageRecords[i]).Append(',');
-            //stringBuilder.Length -= 1;
-            //File.WriteAllText("HillLoss.csv", stringBuilder.ToString());
             Console.WriteLine("train finish");
         }
-        private static void SillyPlayWithHill()
+        private static void SillyPlayWithSilly()
         {
-            //GameLogic gameLogic = new GameLogic();
-            //gameLogic.BlackChessPlayer = new Silly();
-            //Hill hill = new Hill();
-            //hill.ClearMemory();
-            //gameLogic.WhiteChessPlayer = hill;
-            //gameLogic.OneTurnFinish_Handle += () =>
-            //{
-            //    StringBuilder stringBuilder = new StringBuilder();
-            //    gameLogic.ConvertToLogFormat(stringBuilder);
-            //    Console.Clear();
-            //    Console.WriteLine(stringBuilder);
-            //    Console.ReadLine();
-            //};
-            //gameLogic.PlayToEnd();
-            //Console.WriteLine($"winner: {gameLogic.Winner}");
-            //Console.ReadLine();
+            Silly whiteSilly = new Silly(true);
+            whiteSilly.TryRecall();
+            Silly blackSilly = new Silly(true);
+            blackSilly.NeuralNetwork = whiteSilly.NeuralNetwork;
+
+            GameLogic gameLogic = new GameLogic()
+            {
+                BlackChessPlayer = blackSilly,
+                WhiteChessPlayer = whiteSilly,
+            };
+            gameLogic.OneTurnFinish_Handle += () =>
+            {
+                StringBuilder stringBuilder = new StringBuilder();
+                gameLogic.ConvertToLogFormat(stringBuilder);
+                Console.WriteLine(stringBuilder.ToString());
+                Console.WriteLine();
+                stringBuilder.Clear();
+                if (gameLogic.ToOpponent(gameLogic.CurrentPlayer) is Silly silly)
+                    silly.LogEvaluation(gameLogic, stringBuilder);
+                Console.WriteLine(stringBuilder.ToString());
+                Console.ReadLine();
+            };
+            gameLogic.PlayToEnd();
         }
+
     }
 }

@@ -19,7 +19,8 @@ namespace FiveInARow
 
         public const float PickValue = 1f;
         public const float AIAbortValue = 0f;
-        //public const float AIBelieveSelf = 0.2f;
-        public const float AIBelieveRuleAllow = 0.1f;
+        public const float AIBelieveSelf = 0.2f;
+
+        public static Random Random = new Random();
     }
 }

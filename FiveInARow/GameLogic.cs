@@ -28,6 +28,8 @@ namespace FiveInARow
             }
         }
 
+        public IController CurrentPlayer { get; private set; }
+
         public bool GameEnd { get; private set; }
         public ChessType Winner { get; private set; }
         public List<Vector2Int> ChessRecords { get; private set; }
@@ -53,31 +55,31 @@ namespace FiveInARow
 
         public void PlayToEnd()
         {
-            IController? currentPlayer = null;
+            CurrentPlayer = null;
             int playTurnCount = 0;
             while (!GameEnd && playTurnCount++ < Defined.Size)
             {
-                if (currentPlayer == null)
-                    currentPlayer = BlackChessPlayer;
+                if (CurrentPlayer == null)
+                    CurrentPlayer = BlackChessPlayer;
                 else
-                    currentPlayer = ToOpponent(currentPlayer);
-                currentPlayer.Play(this, out Vector2Int position);
+                    CurrentPlayer = ToOpponent(CurrentPlayer);
+                CurrentPlayer.Play(this, out Vector2Int position);
                 if (position.Y < 0 || position.Y > Chessboard.GetLength(0) ||
                     position.X < 0 || position.X > Chessboard.GetLength(1))
                 {
-                    throw new Exception($"{currentPlayer} want to play chess at {position.X}, {position.Y}");
+                    throw new Exception($"{CurrentPlayer} want to play chess at {position.X}, {position.Y}");
                 }
                 if (Chessboard[position.Y, position.X] != ChessType.Empty)
                 {
-                    throw new Exception($"{currentPlayer} want to replace chess {Chessboard[position.Y, position.X]} at {position.X}, {position.Y}");
+                    throw new Exception($"{CurrentPlayer} want to replace chess {Chessboard[position.Y, position.X]} at {position.X}, {position.Y}");
                 }
-                Chessboard[position.Y, position.X] = currentPlayer.ChessType;
+                Chessboard[position.Y, position.X] = CurrentPlayer.ChessType;
                 ChessRecords.Add(position);
 
                 if (XYFiveInARow(position) || SlopeFiveInARow(position))
                 {
                     GameEnd = true;
-                    Winner = currentPlayer.ChessType;
+                    Winner = CurrentPlayer.ChessType;
                 }
                 OneTurnFinish_Handle?.Invoke();
             }
@@ -171,6 +173,24 @@ namespace FiveInARow
             return false;
         }
 
+        public Vector2Int RandomPickEmptyPosition()
+        {
+            int emptyPositionCount = Defined.Size - ChessRecords.Count;
+            if (emptyPositionCount == 0)
+                throw new Exception("Zero empty position can't random pick");
+            int randomIndex = Defined.Random.Next() % emptyPositionCount;
+            for (int row = 0; row < Chessboard.GetLength(0); row++)
+                for (int column = 0; column < Chessboard.GetLength(1); column++)
+                {
+                    if (Chessboard[row, column] == ChessType.Empty)
+                    {
+                        if (randomIndex-- == 0)
+                            return new Vector2Int(column, row);
+                    }
+                }
+            throw new Exception("random pick have bug");
+        }
+
         internal float[] ConvertToNNFormat(ChessType aiChessType)
         {
             float[] value = new float[Defined.Size + Defined.Size];
@@ -197,26 +217,27 @@ namespace FiveInARow
         }
         internal void ConvertToLogFormat(StringBuilder stringBuilder)
         {
-            stringBuilder.Append("  ");
+            stringBuilder.Append("     ");
             for (int column = 0; column < Defined.Width; column++)
-                stringBuilder.Append(column).Append(" ");
+                stringBuilder.Append(column).Append("   ");
             stringBuilder.AppendLine();
             for (int row = 0; row < Defined.Height; row++)
             {
-                stringBuilder.Append(row).Append(" ");
+                stringBuilder.Append(row).Append("   ");
                 for (int column = 0; column < Defined.Width; column++)
                 {
                     ChessType type = Chessboard[row, column];
                     if (type == ChessType.Black)
-                        stringBuilder.Append("X ");
+                        stringBuilder.Append(" X  ");
                     else if (type == ChessType.Empty)
-                        stringBuilder.Append("_ ");
+                        stringBuilder.Append(" _  ");
                     else if (type == ChessType.White)
-                        stringBuilder.Append("O ");
+                        stringBuilder.Append(" O  ");
                 }
                 stringBuilder.AppendLine();
             }
         }
+
         internal void Copy(GameLogic gameLogic)
         {
             for (int row = 0; row < Chessboard.GetLength(0); row++)

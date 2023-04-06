@@ -17,7 +17,6 @@ namespace FiveInARow
 
         public void Play(GameLogic gameLogic, out Vector2Int position)
         {
-            Console.Clear();
             m_LogBuilder.Clear();
             gameLogic.ConvertToLogFormat(m_LogBuilder);
             Console.WriteLine(m_LogBuilder.ToString());
@@ -38,7 +37,6 @@ namespace FiveInARow
         }
         public void GameEnd(GameLogic gameLogic)
         {
-            Console.Clear();
             m_LogBuilder.Clear();
             gameLogic.ConvertToLogFormat(m_LogBuilder);
             Console.WriteLine(m_LogBuilder.ToString());

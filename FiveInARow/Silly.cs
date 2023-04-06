@@ -1,140 +1,129 @@
-﻿using System;
+﻿using LittleNN;
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 
 namespace FiveInARow
 {
     public class Silly : IController
     {
-        public Vector2Int[] Positions;
+        public ChessType ChessType { get; set; }
+        public readonly bool StopTrain;
+        private int m_TrainTimes;
+        public float LastLoss;
+        public NeuralNetwork NeuralNetwork;
+        public readonly GameLogic Notebook;
 
-        public Silly()
+        public Silly(bool stopTrain)
         {
+            StopTrain = stopTrain;
+            Notebook = new GameLogic();
         }
 
-        public ChessType ChessType { get; set; }
+        public void TryRecall()
+        {
+            string path = Path.Combine(Defined.ModelDirectory, "Silly.bin");
+            if (File.Exists(path))
+            {
+                NeuralNetwork = NeuralNetwork.LoadFrom(path);
+                Console.WriteLine("load nn model at: " + path);
+            }
+            else
+            {
+                List<Sequential> sequential = Sequential.CreateNew();
+                sequential.Add(Sequential.Neural("input layer", Defined.NNInputSize));
+                sequential.Add(Sequential.Activation("linear link", ActivationsFunctionType.LeakyReLU));
+                sequential.Add(Sequential.Neural("hidden layer", Defined.Size * 2));
+                sequential.Add(Sequential.Activation("sigmoid link", ActivationsFunctionType.Sigmoid));
+                sequential.Add(Sequential.Neural("hidden layer", Defined.Size * 2));
+                sequential.Add(Sequential.Activation("sigmoid link", ActivationsFunctionType.Sigmoid));
+                sequential.Add(Sequential.Neural("output layer", Defined.Size));
+                NeuralNetwork = new NeuralNetwork(sequential, 0.02f, 0.75f);
+                Console.WriteLine("create new nn model");
+            }
+        }
+        public void SaveMemory()
+        {
+            NeuralNetwork.SaveTo(Path.Combine(Defined.ModelDirectory, "Silly.bin"));
+            m_TrainTimes = 0;
+        }
+
+        public void LogEvaluation(GameLogic gameLogic, StringBuilder stringBuilder)
+        {
+            stringBuilder.AppendLine($"Evaluation {ChessType}");
+            stringBuilder.Append("     ");
+            for (int column = 0; column < Defined.Width; column++)
+                stringBuilder.Append(column).Append("   ");
+            stringBuilder.AppendLine();
+            float[] chessboard = gameLogic.ConvertToNNFormat(ChessType);
+            float[] evaluation = NeuralNetwork.Forward(chessboard);
+            for (int i = 0; i < evaluation.Length; i++)
+            {
+                int row = i / Defined.Width;
+                int column = i % Defined.Width;
+                int value = (int)MathF.Floor(evaluation[i] * 100f);
+                if (column == 0)
+                    stringBuilder.Append(row).Append("  ");
+                stringBuilder.Append(value.ToString().PadLeft(3)).Append(" ");
+                if (column == Defined.Width - 1)
+                    stringBuilder.AppendLine();
+            }
+        }
 
         public void Play(GameLogic gameLogic, out Vector2Int position)
         {
-            int index = gameLogic.ChessRecords.Count / 2;
-            position = Positions[index];
+            float[] chessboard = gameLogic.ConvertToNNFormat(ChessType);
+            position = new Vector2Int(-1, -1); // just for compile...
+            float[] hillEvaluation = NeuralNetwork.Forward(chessboard);
+            float maxEvaluation = 0f;
+            for (int i = 0; i < hillEvaluation.Length; i++)
+            {
+                if (hillEvaluation[i] < maxEvaluation)
+                    continue;
+                int row = i / Defined.Width;
+                int column = i % Defined.Width;
+                if (gameLogic.Chessboard[row, column] != ChessType.Empty)
+                    continue;
+                maxEvaluation = hillEvaluation[i];
+                position.X = column;
+                position.Y = row;
+            }
+
+            if (position.X == -1)
+            {
+                position = gameLogic.RandomPickEmptyPosition();
+            }
+        }
+        public void LearnLastStep()
+        {
+            Notebook.Repentance(out Vector2Int chessPosition, out ChessType chessType);
+            float[] chessboard = Notebook.ConvertToNNFormat(chessType);
+            float[] hillEvaluation = NeuralNetwork.Forward(chessboard);
+            float[] hillEvaluationCopy = new float[hillEvaluation.Length];
+            Array.Copy(hillEvaluation, hillEvaluationCopy, hillEvaluation.Length);
+            for (int i = 0; i < hillEvaluation.Length; i++)
+            {
+                // check this position is allowed by game rule
+                if (hillEvaluation[i] > Defined.AIBelieveSelf)
+                {
+                    int row = i / Defined.Width;
+                    int column = i % Defined.Width;
+                    if (Notebook.Chessboard[row, column] != ChessType.Empty)
+                        hillEvaluation[i] = Defined.AIAbortValue;
+                }
+            }
+            hillEvaluation[chessPosition.Y * Defined.Width + chessPosition.X] = Defined.AIChooseValue;
+            LastLoss = LossFuntion.MSELoss(hillEvaluationCopy, hillEvaluation);
+            NeuralNetwork.OptimizerBackward(hillEvaluation);
+            NeuralNetwork.OptimizerStep();
+            if (m_TrainTimes++ > 1000)
+                SaveMemory();
         }
         public void GameEnd(GameLogic gameLogic)
         {
-        }
-
-        private static Random random = new Random();
-        public static IEnumerable<(Vector2Int[], Vector2Int[])> EnumAll5InARowPattern()
-        {
-            bool[] buffer = new bool[Defined.Size];
-
-            //O _ _ _ _
-            //O _ _ _ _
-            //O _ _ _ _
-            //O _ _ _ _
-            //O _ _ _ _
-            //_ _ _ _ _
-            for (int row = 0; row < Defined.Height - 5 + 1; row++)
-                for (int column = 0; column < Defined.Width; column++)
-                {
-                    Array.Clear(buffer, 0, buffer.Length);
-                    Vector2Int[] whitePositions = new Vector2Int[5];
-                    for (int i = 0; i < 5; i++)
-                    {
-                        whitePositions[i] = new Vector2Int(column, row + i);
-                        buffer[(row + i) * Defined.Width + column] = true;
-                    }
-                    Shuffle(whitePositions);
-                    Vector2Int[] blackPositions = RandomBlackList();
-                    yield return (blackPositions, whitePositions);
-                }
-
-            //O O O O O _
-            //_ _ _ _ _ _
-            //_ _ _ _ _ _
-            //_ _ _ _ _ _
-            //_ _ _ _ _ _
-            for (int row = 0; row < Defined.Height; row++)
-                for (int column = 0; column < Defined.Width - 5 + 1; column++)
-                {
-                    Array.Clear(buffer, 0, buffer.Length);
-                    Vector2Int[] whitePositions = new Vector2Int[5];
-                    for (int i = 0; i < 5; i++)
-                    {
-                        whitePositions[i] = new Vector2Int(column + i, row);
-                        buffer[row * Defined.Width + column + i] = true;
-                    }
-                    Shuffle(whitePositions);
-                    Vector2Int[] blackPositions = RandomBlackList();
-                    yield return (blackPositions, whitePositions);
-                }
-
-            //O _ _ _ _
-            //_ O _ _ _
-            //_ _ O _ _
-            //_ _ _ O _
-            //_ _ _ _ O
-            for (int row = 0; row < Defined.Height - 5 + 1; row++)
-                for (int column = 0; column < Defined.Width - 5 + 1; column++)
-                {
-                    Array.Clear(buffer, 0, buffer.Length);
-                    Vector2Int[] whitePositions = new Vector2Int[5];
-                    for (int i = 0; i < 5; i++)
-                    {
-                        whitePositions[i] = new Vector2Int(column + i, row + i);
-                        buffer[(row + i) * Defined.Width + column + i] = true;
-                    }
-                    Shuffle(whitePositions);
-                    Vector2Int[] blackPositions = RandomBlackList();
-                    yield return (blackPositions, whitePositions);
-                }
-
-            //_ _ _ _ O
-            //_ _ _ O _
-            //_ _ O _ _
-            //_ O _ _ _
-            //O _ _ _ _
-            for (int row = 0; row < Defined.Height - 5 + 1; row++)
-                for (int column = 0; column < Defined.Width - 5 + 1; column++)
-                {
-                    Array.Clear(buffer, 0, buffer.Length);
-                    Vector2Int[] whitePositions = new Vector2Int[5];
-                    for (int i = 0; i < 5; i++)
-                    {
-                        whitePositions[i] = new Vector2Int(column + 4 - i, row + i);
-                        buffer[(row + i) * Defined.Width + column + 4 - i] = true;
-                    }
-                    Shuffle(whitePositions);
-                    Vector2Int[] blackPositions = RandomBlackList();
-                    yield return (blackPositions, whitePositions);
-                }
-
-            Vector2Int[] RandomBlackList()
-            {
-                int blackIndex = 0;
-                Vector2Int[] result = new Vector2Int[6];
-                while (blackIndex < result.Length)
-                {
-                    int randomValue = random.Next() % Defined.Size;
-                    int randomRow = randomValue / Defined.Width;
-                    int randomColumn = randomValue % Defined.Width;
-                    if (!buffer[randomRow * Defined.Width + randomColumn])
-                    {
-                        buffer[randomRow * Defined.Width + randomColumn] = true;
-                        result[blackIndex++] = new Vector2Int(randomColumn, randomRow);
-                    }
-                }
-                return result;
-            }
-            void Shuffle(Vector2Int[] array)
-            {
-                for (int i = 0; i < array.Length - 1; i++)
-                {
-                    int swapTarget = random.Next() % array.Length;
-                    Vector2Int temp = array[swapTarget];
-                    array[swapTarget] = array[i];
-                    array[i] = temp;
-                }
-            }
+            if (StopTrain)
+                return;
         }
     }
 }
