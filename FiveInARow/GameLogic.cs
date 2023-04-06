@@ -183,7 +183,7 @@ namespace FiveInARow
                     if (type == ChessType.Empty)
                         t = Defined.EmptyChessValue;
                     else if (type == aiChessType)
-                        t = Defined.AIChessValue;
+                        t = Defined.AIChooseValue;
                     else
                         t = Defined.OpponentChessValue;
                     value[row * Defined.Width + column] = t;
