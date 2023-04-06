@@ -173,20 +173,24 @@ namespace FiveInARow
 
         internal float[] ConvertToNNFormat(ChessType aiChessType)
         {
-            float[] value = new float[Defined.Size];
+            float[] value = new float[Defined.Size + Defined.Size];
             for (int row = 0; row < Defined.Height; row++)
             {
                 for (int column = 0; column < Defined.Width; column++)
                 {
-                    float t;
                     ChessType type = Chessboard[row, column];
                     if (type == ChessType.Empty)
-                        t = Defined.EmptyChessValue;
+                    {
+                        // default value is zero, skip set value to improve performance
+                        /*
+                        value[row * Defined.Width + column] = Defined.EmptyChessValue;
+                        value[row * Defined.Width + column + Defined.Size] = Defined.EmptyChessValue;
+                        */
+                    }
                     else if (type == aiChessType)
-                        t = Defined.AIChooseValue;
+                        value[row * Defined.Width + column] = Defined.AIChessValue;
                     else
-                        t = Defined.OpponentChessValue;
-                    value[row * Defined.Width + column] = t;
+                        value[row * Defined.Width + column + Defined.Size] = Defined.OpponentChessValue;
                 }
             }
             return value;

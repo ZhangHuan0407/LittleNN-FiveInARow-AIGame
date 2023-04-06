@@ -8,10 +8,12 @@ namespace FiveInARow
         public const int Width = 9;
         public const int Height = 9;
         public const int Size = Width * Height;
+        public const int NNInputSize = Size;
 
         public const float AIChooseValue = 1f;
-        public const float OpponentChessValue = 0f;
-        public const float EmptyChessValue = 0.5f;
+        public const float AIChessValue = 1f;
+        public const float OpponentChessValue = 1f;
+        public const float EmptyChessValue = 0f;
 
         public static string ModelDirectory = string.Empty;
 

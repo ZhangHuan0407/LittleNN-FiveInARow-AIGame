@@ -27,13 +27,11 @@ namespace FiveInARow
         public void ClearMemory()
         {
             List<Sequential> sequential = Sequential.CreateNew();
-            sequential.Add(Sequential.Neural("input layer", Defined.Size));
+            sequential.Add(Sequential.Neural("input layer", Defined.NNInputSize));
             sequential.Add(Sequential.Activation("linear link", ActivationsFunctionType.LeakyReLU));
-            sequential.Add(Sequential.Neural("hidden layer", 300));
+            sequential.Add(Sequential.Neural("hidden layer", Defined.NNInputSize * 2));
             sequential.Add(Sequential.Activation("sigmoid link", ActivationsFunctionType.Sigmoid));
-            sequential.Add(Sequential.Neural("hidden layer", 300));
-            sequential.Add(Sequential.Activation("sigmoid link", ActivationsFunctionType.Sigmoid));
-            sequential.Add(Sequential.Neural("hidden layer", 300));
+            sequential.Add(Sequential.Neural("hidden layer", 200));
             sequential.Add(Sequential.Activation("sigmoid link", ActivationsFunctionType.Sigmoid));
             sequential.Add(Sequential.Neural("output layer", Defined.Size));
             m_NeuralNetwork = new NeuralNetwork(sequential, 0.02f, 0.75f);
@@ -70,7 +68,7 @@ namespace FiveInARow
             //    if (hillEvaluation[i] < maxEvaluation)
             //        continue;
             //    int row = i / Defined.Width;
-            //    int column = i % Defined.Height;
+            //    int column = i % Defined.Width;
             //    if (gameLogic.Chessboard[row, column] != ChessType.Empty)
             //        continue;
             //    maxEvaluation = hillEvaluation[i];
@@ -84,7 +82,7 @@ namespace FiveInARow
             //    for (int i = 0; i < chessboard.Length; i++)
             //    {
             //        int row = i / Defined.Width;
-            //        int column = i % Defined.Height;
+            //        int column = i % Defined.Width;
             //        if (gameLogic.Chessboard[row, column] == ChessType.Empty)
             //            m_PositionList.Add(new Vector2Int(column, row));
             //    }
@@ -104,7 +102,7 @@ namespace FiveInARow
                 if (hillEvaluation[i] > Defined.AIBelieveRuleAllow)
                 {
                     int row = i / Defined.Width;
-                    int column = i % Defined.Height;
+                    int column = i % Defined.Width;
                     if (Notebook.Chessboard[row, column] != ChessType.Empty)
                         hillEvaluation[i] = Defined.AIAbortValue;
                 }
