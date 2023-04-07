@@ -74,7 +74,7 @@ namespace FiveInARow
                     {
                         // Learn white chess only and ignore white chess first step
                         if (gameLogic.StepRecords.Count % 2 == 0 &&
-                            gameLogic.StepRecords.Count > 2)
+                            gameLogic.StepRecords.Count > 1)
                         {
                             silly.Notebook.Copy(gameLogic);
                             silly.LearnLastStep();
