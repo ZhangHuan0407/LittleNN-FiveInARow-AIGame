@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace FiveInARow
@@ -32,7 +33,7 @@ namespace FiveInARow
 
         public bool GameEnd { get; private set; }
         public ChessType Winner { get; private set; }
-        public List<Vector2Int> ChessRecords { get; private set; }
+        public List<OneStep> StepRecords { get; private set; }
         public event Action OneTurnFinish_Handle;
 
         public GameLogic()
@@ -40,7 +41,7 @@ namespace FiveInARow
             Chessboard = new ChessType[Defined.Height, Defined.Width];
             GameEnd = false;
             Winner = ChessType.Empty;
-            ChessRecords = new List<Vector2Int>();
+            StepRecords = new List<OneStep>();
         }
 
         public IController ToOpponent(IController currentPlayer)
@@ -63,7 +64,8 @@ namespace FiveInARow
                     CurrentPlayer = BlackChessPlayer;
                 else
                     CurrentPlayer = ToOpponent(CurrentPlayer);
-                CurrentPlayer.Play(this, out Vector2Int position);
+                CurrentPlayer.Play(this, out OneStep oneStep);
+                Vector2Int position = oneStep.Position;
                 if (position.Y < 0 || position.Y > Chessboard.GetLength(0) ||
                     position.X < 0 || position.X > Chessboard.GetLength(1))
                 {
@@ -74,7 +76,7 @@ namespace FiveInARow
                     throw new Exception($"{CurrentPlayer} want to replace chess {Chessboard[position.Y, position.X]} at {position.X}, {position.Y}");
                 }
                 Chessboard[position.Y, position.X] = CurrentPlayer.ChessType;
-                ChessRecords.Add(position);
+                StepRecords.Add(oneStep);
 
                 if (XYFiveInARow(CurrentPlayer.ChessType, position) || SlopeFiveInARow(CurrentPlayer.ChessType, position))
                 {
@@ -175,7 +177,7 @@ namespace FiveInARow
 
         public Vector2Int RandomPickEmptyPosition()
         {
-            int emptyPositionCount = Defined.Size - ChessRecords.Count;
+            int emptyPositionCount = Defined.Size - StepRecords.Count;
             if (emptyPositionCount == 0)
                 throw new Exception("Zero empty position can't random pick");
             int randomIndex = Defined.Random.Next() % emptyPositionCount;
@@ -194,7 +196,7 @@ namespace FiveInARow
 
         internal float[] ConvertToNNFormat(ChessType aiChessType)
         {
-            float[] value = ArrayBuffer.Rent(Defined.NNInputSize);
+            float[] value = MemoryBuffer.RentFloatArray(Defined.NNInputSize);
             int offset = 0;
             for (int row = 0; row < Defined.Height; row++)
             {
@@ -321,17 +323,21 @@ namespace FiveInARow
             m_WhiteChessPlayer = gameLogic.m_WhiteChessPlayer;
             GameEnd = gameLogic.GameEnd;
             Winner = gameLogic.Winner;
-            ChessRecords.Clear();
-            ChessRecords.AddRange(gameLogic.ChessRecords);
+            StepRecords.Clear();
+            StepRecords.AddRange(gameLogic.StepRecords);
+            CurrentPlayer = gameLogic.CurrentPlayer;
         }
-        internal void Repentance(out Vector2Int lastChessPosition, out ChessType chessType)
+        internal void Repentance(out OneStep lastStep, out ChessType chessType)
         {
-            if (ChessRecords.Count == 0)
+            if (StepRecords.Count == 0)
                 throw new Exception("Repentance, ChessRecords.Count = 0");
-            lastChessPosition = ChessRecords[ChessRecords.Count - 1];
-            ChessRecords.RemoveAt(ChessRecords.Count - 1);
+            Winner = ChessType.Empty;
+            lastStep = StepRecords[StepRecords.Count - 1];
+            StepRecords.RemoveAt(StepRecords.Count - 1);
+            Vector2Int lastChessPosition = lastStep.Position;
             chessType = Chessboard[lastChessPosition.Y, lastChessPosition.X];
             Chessboard[lastChessPosition.Y, lastChessPosition.X] = ChessType.Empty;
+            CurrentPlayer = ToOpponent(CurrentPlayer);
         }
     }
 }

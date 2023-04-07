@@ -15,7 +15,7 @@ namespace FiveInARow
             m_LogBuilder = new StringBuilder();
         }
 
-        public void Play(GameLogic gameLogic, out Vector2Int position)
+        public void Play(GameLogic gameLogic, out OneStep oneStep)
         {
             m_LogBuilder.Clear();
             gameLogic.ConvertToLogFormat(m_LogBuilder);
@@ -29,16 +29,15 @@ namespace FiveInARow
             {
                 int x = int.Parse(match.Groups["X"].Value);
                 int y = int.Parse(match.Groups["Y"].Value);
-                position.X = x;
-                position.Y = y;
+                oneStep = new OneStep(new Vector2Int(x, y));
                 if (x < 0 || x >= Defined.Width ||
                     y < 0 || y >= Defined.Height)
                 {
-                    Play(gameLogic, out position);
+                    Play(gameLogic, out oneStep);
                 }
             }
             else
-                Play(gameLogic, out position);
+                Play(gameLogic, out oneStep);
         }
         public void GameEnd(GameLogic gameLogic)
         {

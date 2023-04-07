@@ -9,18 +9,24 @@ namespace FiveInARow
     public class Silly : IController
     {
         public ChessType ChessType { get; set; }
-        private int m_TrainTimes;
-        private float[] m_SillyEvaluationCopy;
-        public float LastLoss;
-        public NeuralNetwork NeuralNetwork;
         public readonly GameLogic Notebook;
         private List<Vector2Int> m_PositionList;
 
+        private float[] m_SillyEvaluationCopy;
+        public float LastLoss { get; private set; }
+        private int m_TrainTimes;
+        public NeuralNetwork NeuralNetwork;
+
         public Silly()
         {
+            ChessType = ChessType.Empty;
             Notebook = new GameLogic();
-            m_SillyEvaluationCopy = new float[Defined.Size];
             m_PositionList = new List<Vector2Int>();
+
+            m_SillyEvaluationCopy = new float[Defined.Size];
+            LastLoss = 0f;
+            m_TrainTimes = 0;
+            NeuralNetwork = null;
         }
 
         public void TryRecall()
@@ -51,7 +57,7 @@ namespace FiveInARow
             m_TrainTimes = 0;
         }
 
-        public void LogEvaluation(GameLogic gameLogic, StringBuilder stringBuilder)
+        internal void LogEvaluation(GameLogic gameLogic, StringBuilder stringBuilder)
         {
             stringBuilder.AppendLine($"Evaluation {ChessType}");
             stringBuilder.Append("     ");
@@ -60,7 +66,7 @@ namespace FiveInARow
             stringBuilder.AppendLine();
             float[] chessboard = gameLogic.ConvertToNNFormat(ChessType);
             float[] evaluation = NeuralNetwork.Forward(chessboard);
-            ArrayBuffer.Revert(chessboard);
+            MemoryBuffer.RevertFloatArray(chessboard);
             for (int i = 0; i < evaluation.Length; i++)
             {
                 int row = i / Defined.Width;
@@ -84,16 +90,16 @@ namespace FiveInARow
             }
         }
 
-        public void Play(GameLogic gameLogic, out Vector2Int position)
+        public void Play(GameLogic gameLogic, out OneStep oneStep)
         {
             if (Defined.Random.NextDouble() < Defined.SillyMakeMistake)
             {
-                position = gameLogic.RandomPickEmptyPosition();
+                oneStep = new SillyOneStep(gameLogic.RandomPickEmptyPosition(), true, true);
                 return;
             }
             float[] chessboard = gameLogic.ConvertToNNFormat(ChessType);
             float[] sillyEvaluation = NeuralNetwork.Forward(chessboard);
-            ArrayBuffer.Revert(chessboard);
+            MemoryBuffer.RevertFloatArray(chessboard);
             m_PositionList.Clear();
             for (int i = 0; i < sillyEvaluation.Length; i++)
             {
@@ -107,16 +113,16 @@ namespace FiveInARow
             }
 
             if (m_PositionList.Count > 0)
-                position = m_PositionList[Defined.Random.Next() % m_PositionList.Count];
+                oneStep = new SillyOneStep(m_PositionList[Defined.Random.Next() % m_PositionList.Count], false, false);
             else
-                position = gameLogic.RandomPickEmptyPosition();
+                oneStep = new SillyOneStep(gameLogic.RandomPickEmptyPosition(), false, true);
         }
         public void LearnLastStep()
         {
-            Notebook.Repentance(out Vector2Int chessPosition, out ChessType chessType);
+            Notebook.Repentance(out OneStep oneStep, out ChessType chessType);
             float[] chessboard = Notebook.ConvertToNNFormat(chessType);
             float[] sillyEvaluation = NeuralNetwork.Forward(chessboard);
-            ArrayBuffer.Revert(chessboard);
+            MemoryBuffer.RevertFloatArray(chessboard);
             Array.Copy(sillyEvaluation, m_SillyEvaluationCopy, sillyEvaluation.Length);
             for (int i = 0; i < sillyEvaluation.Length; i++)
             {
@@ -129,6 +135,7 @@ namespace FiveInARow
                         sillyEvaluation[i] = (Defined.AIAbortValue + sillyEvaluation[i]) / 2f;
                 }
             }
+            Vector2Int chessPosition = oneStep.Position;
             float sillyP = sillyEvaluation[chessPosition.Y * Defined.Width + chessPosition.X];
             if (sillyP < Defined.AIChooseValue)
                 sillyEvaluation[chessPosition.Y * Defined.Width + chessPosition.X] = (sillyP + Defined.PickValue) / 2f;

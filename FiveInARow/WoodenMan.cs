@@ -15,10 +15,10 @@ namespace FiveInARow
 
         public ChessType ChessType { get; set; }
 
-        public void Play(GameLogic gameLogic, out Vector2Int position)
+        public void Play(GameLogic gameLogic, out OneStep oneStep)
         {
-            int index = gameLogic.ChessRecords.Count / 2;
-            position = Positions[index];
+            int index = gameLogic.StepRecords.Count / 2;
+            oneStep = new OneStep(Positions[index]);
         }
         public void GameEnd(GameLogic gameLogic)
         {

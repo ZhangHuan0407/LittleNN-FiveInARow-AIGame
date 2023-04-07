@@ -8,6 +8,7 @@ namespace FiveInARow
         public const int Width = 9;
         public const int Height = 9;
         public const int Size = Width * Height;
+        // 442 length
         public const int NNInputSize = /*ai chess ? 1 : 0*/Size + /*opponent chess ? 1 : 0*/Size +
                                        /*ai chess in 5 row or 5 column*/(Width - 5 + 1) * Height + Width * (Height - 5 + 1) +
                                        /*ai chess in 5 slope*/(Width - 5 + 1) * (Height - 5 + 1) * 2 +
@@ -26,6 +27,10 @@ namespace FiveInARow
         public const float AIChooseValue = 0.8f;
 
         public const float SillyMakeMistake = 0.1f;
+        public const float HillMakeMistake = 0.01f;
+        public const float HillLowExpectationRatio = 0.1f;
+
+        public const int DeepthMax = 8;
 
         public static Random Random = new Random();
     }

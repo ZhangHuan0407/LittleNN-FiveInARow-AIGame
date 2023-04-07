@@ -11,5 +11,6 @@
         }
 
         public override int GetHashCode() => (X << 16 | Y);
+        public override string ToString() => $"X: {X},  Y: {Y}";
     }
 }

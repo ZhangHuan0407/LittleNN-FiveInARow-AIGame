@@ -13,6 +13,7 @@ namespace FiveInARow
         [STAThread]
         private static void Main(string[] args)
         {
+            Console.WriteLine(Defined.NNInputSize);
             ReadArguments(args);
             WoodenManTrainSilly();
             //HumanPlayWithSilly();
@@ -73,8 +74,8 @@ namespace FiveInARow
                     gameLogic.OneTurnFinish_Handle += () =>
                     {
                         // Learn white chess only and ignore white chess first step
-                        if (gameLogic.ChessRecords.Count % 2 == 0 &&
-                            gameLogic.ChessRecords.Count > 2)
+                        if (gameLogic.StepRecords.Count % 2 == 0 &&
+                            gameLogic.StepRecords.Count > 2)
                         {
                             silly.Notebook.Copy(gameLogic);
                             silly.LearnLastStep();
@@ -107,6 +108,9 @@ namespace FiveInARow
             };
             gameLogic.OneTurnFinish_Handle += () =>
             {
+                OneStep lastStep = gameLogic.StepRecords[gameLogic.StepRecords.Count - 1];
+                if (lastStep is SillyOneStep sillyOneStep)
+                    Console.WriteLine(sillyOneStep.ToString());
                 StringBuilder stringBuilder = new StringBuilder();
                 gameLogic.ConvertToLogFormat(stringBuilder);
                 Console.WriteLine(stringBuilder.ToString());
@@ -133,6 +137,9 @@ namespace FiveInARow
             };
             gameLogic.OneTurnFinish_Handle += () =>
             {
+                OneStep lastStep = gameLogic.StepRecords[gameLogic.StepRecords.Count - 1];
+                if (lastStep is SillyOneStep sillyOneStep)
+                    Console.WriteLine(sillyOneStep.ToString());
                 if (gameLogic.ToOpponent(gameLogic.CurrentPlayer) is Silly silly)
                 {
                     StringBuilder stringBuilder = new StringBuilder();
