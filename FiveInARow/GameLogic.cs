@@ -89,17 +89,18 @@ namespace FiveInARow
         private bool XYFiveInARow(Vector2Int position)
         {
             int count = 0;
-            ChessType chessType = Chessboard[position.Y, position.X];
-            for (int x = position.X + 1; x < Chessboard.GetLength(1); x++)
+            ChessType[,] chessboard = Chessboard;
+            ChessType chessType = chessboard[position.Y, position.X];
+            for (int x = position.X + 1; x < chessboard.GetLength(1); x++)
             {
-                if (Chessboard[position.Y, x] == chessType)
+                if (chessboard[position.Y, x] == chessType)
                     count++;
                 else
                     break;
             }
             for (int x = position.X - 1; x >= 0; x--)
             {
-                if (Chessboard[position.Y, x] == chessType)
+                if (chessboard[position.Y, x] == chessType)
                     count++;
                 else
                     break;
@@ -109,16 +110,16 @@ namespace FiveInARow
                 return true;
 
             count = 0;
-            for (int y = position.Y + 1; y < Chessboard.GetLength(0); y++)
+            for (int y = position.Y + 1; y < chessboard.GetLength(0); y++)
             {
-                if (Chessboard[y, position.X] == chessType)
+                if (chessboard[y, position.X] == chessType)
                     count++;
                 else
                     break;
             }
             for (int y = position.Y - 1; y >= 0; y--)
             {
-                if (Chessboard[y, position.X] == chessType)
+                if (chessboard[y, position.X] == chessType)
                     count++;
                 else
                     break;
@@ -132,18 +133,19 @@ namespace FiveInARow
         private bool SlopeFiveInARow(Vector2Int position)
         {
             int count = 0;
-            ChessType chessType = Chessboard[position.Y, position.X];
+            ChessType[,] chessboard = Chessboard;
+            ChessType chessType = chessboard[position.Y, position.X];
             int x, y;
-            for (x = position.X + 1, y = position.Y + 1; x < Chessboard.GetLength(1) && y < Chessboard.GetLength(0); x++, y++)
+            for (x = position.X + 1, y = position.Y + 1; x < chessboard.GetLength(1) && y < chessboard.GetLength(0); x++, y++)
             {
-                if (Chessboard[y, x] == chessType)
+                if (chessboard[y, x] == chessType)
                     count++;
                 else
                     break;
             }
             for (x = position.X - 1, y = position.Y - 1; x >= 0 && y >= 0; x--, y--)
             {
-                if (Chessboard[y, x] == chessType)
+                if (chessboard[y, x] == chessType)
                     count++;
                 else
                     break;
@@ -153,16 +155,16 @@ namespace FiveInARow
                 return true;
 
             count = 0;
-            for (x = position.X + 1, y = position.Y - 1; x < Chessboard.GetLength(1) && y >= 0; x++, y--)
+            for (x = position.X + 1, y = position.Y - 1; x < chessboard.GetLength(1) && y >= 0; x++, y--)
             {
-                if (Chessboard[y, x] == chessType)
+                if (chessboard[y, x] == chessType)
                     count++;
                 else
                     break;
             }
-            for (x = position.X - 1, y = position.Y + 1; x >= 0 && y < Chessboard.GetLength(0); x--, y++)
+            for (x = position.X - 1, y = position.Y + 1; x >= 0 && y < chessboard.GetLength(0); x--, y++)
             {
-                if (Chessboard[y, x] == chessType)
+                if (chessboard[y, x] == chessType)
                     count++;
                 else
                     break;
@@ -179,10 +181,11 @@ namespace FiveInARow
             if (emptyPositionCount == 0)
                 throw new Exception("Zero empty position can't random pick");
             int randomIndex = Defined.Random.Next() % emptyPositionCount;
-            for (int row = 0; row < Chessboard.GetLength(0); row++)
-                for (int column = 0; column < Chessboard.GetLength(1); column++)
+            ChessType[,] chessboard = Chessboard;
+            for (int row = 0; row < chessboard.GetLength(0); row++)
+                for (int column = 0; column < chessboard.GetLength(1); column++)
                 {
-                    if (Chessboard[row, column] == ChessType.Empty)
+                    if (chessboard[row, column] == ChessType.Empty)
                     {
                         if (randomIndex-- == 0)
                             return new Vector2Int(column, row);
@@ -193,26 +196,99 @@ namespace FiveInARow
 
         internal float[] ConvertToNNFormat(ChessType aiChessType)
         {
-            float[] value = new float[Defined.Size + Defined.Size];
+            float[] value = ArrayBuffer.Rent(Defined.NNInputSize);
+            int offset = 0;
             for (int row = 0; row < Defined.Height; row++)
             {
                 for (int column = 0; column < Defined.Width; column++)
                 {
-                    ChessType type = Chessboard[row, column];
-                    if (type == ChessType.Empty)
+                    ChessType chessType = Chessboard[row, column];
+                    if (chessType == ChessType.Empty)
                     {
                         // default value is zero, skip set value to improve performance
-                        /*
-                        value[row * Defined.Width + column] = Defined.EmptyChessValue;
-                        value[row * Defined.Width + column + Defined.Size] = Defined.EmptyChessValue;
-                        */
+                        offset += 2;
                     }
-                    else if (type == aiChessType)
-                        value[row * Defined.Width + column] = Defined.AIChessValue;
+                    else if (chessType == aiChessType)
+                    {
+                        value[offset++] = Defined.AIChessValue;
+                        value[offset++] = Defined.EmptyChessValue;
+                    }
                     else
-                        value[row * Defined.Width + column + Defined.Size] = Defined.OpponentChessValue;
+                    {
+                        value[offset++] = Defined.EmptyChessValue;
+                        value[offset++] = Defined.OpponentChessValue;
+                    }
                 }
             }
+            ChessType opponentChessType = aiChessType.ToOpponentChessType();
+            // five in row or five in column
+            for (int row = 0; row < Defined.Height - 5 + 1; row++)
+                for (int column = 0; column < Defined.Width; column++)
+                {
+                    int aiChessCount = 0;
+                    int opponentChessCount = 0;
+                    for (int i = 0; i < 5; i++)
+                    {
+                        ChessType chessType = Chessboard[row + i, column];
+                        if (chessType == aiChessType)
+                            aiChessCount++;
+                        else if (chessType == opponentChessType)
+                            opponentChessCount++;
+                    }
+                    value[offset++] = aiChessCount / 4f;
+                    value[offset++] = opponentChessCount / 4f;
+                }
+            for (int row = 0; row < Defined.Height; row++)
+                for (int column = 0; column < Defined.Width - 5 + 1; column++)
+                {
+                    int aiChessCount = 0;
+                    int opponentChessCount = 0;
+                    for (int i = 0; i < 5; i++)
+                    {
+                        ChessType chessType = Chessboard[row, column + i];
+                        if (chessType == aiChessType)
+                            aiChessCount++;
+                        else if (chessType == opponentChessType)
+                            opponentChessCount++;
+                    }
+                    value[offset++] = aiChessCount / 4f;
+                    value[offset++] = opponentChessCount / 4f;
+                }
+            // five in slope
+            for (int row = 0; row < Defined.Height - 5 + 1; row++)
+                for (int column = 0; column < Defined.Width - 5 + 1; column++)
+                {
+                    int aiChessCount = 0;
+                    int opponentChessCount = 0;
+                    for (int i = 0; i < 5; i++)
+                    {
+                        ChessType chessType = Chessboard[row + i, column + i];
+                        if (chessType == aiChessType)
+                            aiChessCount++;
+                        else if (chessType == opponentChessType)
+                            opponentChessCount++;
+                    }
+                    value[offset++] = aiChessCount / 4f;
+                    value[offset++] = opponentChessCount / 4f;
+                }
+            for (int row = 0; row < Defined.Height - 5 + 1; row++)
+                for (int column = 0; column < Defined.Width - 5 + 1; column++)
+                {
+                    int aiChessCount = 0;
+                    int opponentChessCount = 0;
+                    for (int i = 0; i < 5; i++)
+                    {
+                        ChessType chessType = Chessboard[row + i, column + 4 - i];
+                        if (chessType == aiChessType)
+                            aiChessCount++;
+                        else if (chessType == opponentChessType)
+                            opponentChessCount++;
+                    }
+                    value[offset++] = aiChessCount / 4f;
+                    value[offset++] = opponentChessCount / 4f;
+                }
+            if (offset != Defined.NNInputSize || offset != value.Length)
+                throw new ArgumentException("nn format error");
             return value;
         }
         internal void ConvertToLogFormat(StringBuilder stringBuilder)
@@ -253,7 +329,7 @@ namespace FiveInARow
         internal void Repentance(out Vector2Int lastChessPosition, out ChessType chessType)
         {
             if (ChessRecords.Count == 0)
-                throw new Exception();
+                throw new Exception("Repentance, ChessRecords.Count = 0");
             lastChessPosition = ChessRecords[ChessRecords.Count - 1];
             ChessRecords.RemoveAt(ChessRecords.Count - 1);
             chessType = Chessboard[lastChessPosition.Y, lastChessPosition.X];

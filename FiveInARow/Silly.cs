@@ -9,16 +9,16 @@ namespace FiveInARow
     public class Silly : IController
     {
         public ChessType ChessType { get; set; }
-        public readonly bool StopTrain;
         private int m_TrainTimes;
+        private float[] m_SillyEvaluationCopy;
         public float LastLoss;
         public NeuralNetwork NeuralNetwork;
         public readonly GameLogic Notebook;
 
-        public Silly(bool stopTrain)
+        public Silly()
         {
-            StopTrain = stopTrain;
             Notebook = new GameLogic();
+            m_SillyEvaluationCopy = new float[Defined.Size];
         }
 
         public void TryRecall()
@@ -58,6 +58,7 @@ namespace FiveInARow
             stringBuilder.AppendLine();
             float[] chessboard = gameLogic.ConvertToNNFormat(ChessType);
             float[] evaluation = NeuralNetwork.Forward(chessboard);
+            ArrayBuffer.Revert(chessboard);
             for (int i = 0; i < evaluation.Length; i++)
             {
                 int row = i / Defined.Width;
@@ -75,17 +76,18 @@ namespace FiveInARow
         {
             float[] chessboard = gameLogic.ConvertToNNFormat(ChessType);
             position = new Vector2Int(-1, -1); // just for compile...
-            float[] hillEvaluation = NeuralNetwork.Forward(chessboard);
+            float[] sillyEvaluation = NeuralNetwork.Forward(chessboard);
+            ArrayBuffer.Revert(chessboard);
             float maxEvaluation = 0f;
-            for (int i = 0; i < hillEvaluation.Length; i++)
+            for (int i = 0; i < sillyEvaluation.Length; i++)
             {
-                if (hillEvaluation[i] < maxEvaluation)
+                if (sillyEvaluation[i] < maxEvaluation)
                     continue;
                 int row = i / Defined.Width;
                 int column = i % Defined.Width;
                 if (gameLogic.Chessboard[row, column] != ChessType.Empty)
                     continue;
-                maxEvaluation = hillEvaluation[i];
+                maxEvaluation = sillyEvaluation[i];
                 position.X = column;
                 position.Y = row;
             }
@@ -99,31 +101,31 @@ namespace FiveInARow
         {
             Notebook.Repentance(out Vector2Int chessPosition, out ChessType chessType);
             float[] chessboard = Notebook.ConvertToNNFormat(chessType);
-            float[] hillEvaluation = NeuralNetwork.Forward(chessboard);
-            float[] hillEvaluationCopy = new float[hillEvaluation.Length];
-            Array.Copy(hillEvaluation, hillEvaluationCopy, hillEvaluation.Length);
-            for (int i = 0; i < hillEvaluation.Length; i++)
+            float[] sillyEvaluation = NeuralNetwork.Forward(chessboard);
+            ArrayBuffer.Revert(chessboard);
+            Array.Copy(sillyEvaluation, m_SillyEvaluationCopy, sillyEvaluation.Length);
+            for (int i = 0; i < sillyEvaluation.Length; i++)
             {
                 // check this position is allowed by game rule
-                if (hillEvaluation[i] > Defined.AIBelieveSelf)
+                if (sillyEvaluation[i] > Defined.AIBelieveSelf)
                 {
                     int row = i / Defined.Width;
                     int column = i % Defined.Width;
                     if (Notebook.Chessboard[row, column] != ChessType.Empty)
-                        hillEvaluation[i] = Defined.AIAbortValue;
+                        sillyEvaluation[i] = (Defined.AIAbortValue + sillyEvaluation[i]) / 2f;
                 }
             }
-            hillEvaluation[chessPosition.Y * Defined.Width + chessPosition.X] = Defined.AIChooseValue;
-            LastLoss = LossFuntion.MSELoss(hillEvaluationCopy, hillEvaluation);
-            NeuralNetwork.OptimizerBackward(hillEvaluation);
+            float sillyP = sillyEvaluation[chessPosition.Y * Defined.Width + chessPosition.X];
+            if (sillyP < Defined.AIChooseValue)
+                sillyEvaluation[chessPosition.Y * Defined.Width + chessPosition.X] = (sillyP + Defined.PickValue) / 2f;
+            LastLoss = LossFuntion.MSELoss(m_SillyEvaluationCopy, sillyEvaluation);
+            NeuralNetwork.OptimizerBackward(sillyEvaluation);
             NeuralNetwork.OptimizerStep();
-            if (m_TrainTimes++ > 1000)
+            if (m_TrainTimes++ > 30000)
                 SaveMemory();
         }
         public void GameEnd(GameLogic gameLogic)
         {
-            if (StopTrain)
-                return;
         }
     }
 }

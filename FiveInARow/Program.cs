@@ -14,26 +14,8 @@ namespace FiveInARow
         private static void Main(string[] args)
         {
             ReadArguments(args);
-            //WoodenManTrainSilly();
+            WoodenManTrainSilly();
             //SillyPlayWithSilly();
-
-            Silly whiteSilly = new Silly(true);
-            whiteSilly.TryRecall();
-            GameLogic gameLogic = new GameLogic()
-            {
-                BlackChessPlayer = new HumanPlayer(),
-                WhiteChessPlayer = whiteSilly,
-            };
-            gameLogic.OneTurnFinish_Handle += () =>
-            {
-                StringBuilder stringBuilder = new StringBuilder();
-                if (gameLogic.ToOpponent(gameLogic.CurrentPlayer) is Silly silly)
-                    silly.LogEvaluation(gameLogic, stringBuilder);
-                Console.WriteLine(stringBuilder.ToString());
-            };
-            gameLogic.PlayToEnd();
-            Console.ReadLine();
-            Console.ReadLine();
         }
 
         private static void ReadArguments(string[] args)
@@ -69,9 +51,9 @@ namespace FiveInARow
         }
         private static void WoodenManTrainSilly()
         {
-            Console.WriteLine("SillyTestTrainHill");
-            Silly hill = new Silly(false);
-            hill.TryRecall();
+            Console.WriteLine("WoodenManTrainSilly");
+            Silly silly = new Silly();
+            silly.TryRecall();
 
             WoodenMan blackWoodenMan = new WoodenMan();
             WoodenMan whiteWoodenMan = new WoodenMan();
@@ -93,9 +75,9 @@ namespace FiveInARow
                         if (gameLogic.ChessRecords.Count % 2 == 0 &&
                             gameLogic.ChessRecords.Count > 2)
                         {
-                            hill.Notebook.Copy(gameLogic);
-                            hill.LearnLastStep();
-                            lossTotal += hill.LastLoss;
+                            silly.Notebook.Copy(gameLogic);
+                            silly.LearnLastStep();
+                            lossTotal += silly.LastLoss;
                             trainCount++;
                         }
                     };
@@ -104,17 +86,17 @@ namespace FiveInARow
                 if (i % 50 == 49)
                 {
                     Console.WriteLine($"{i}, {DateTime.Now}, average loss: {lossTotal / trainCount}");
-                    hill.SaveMemory();
                 }
             }
-            hill.SaveMemory();
+            silly.SaveMemory();
             Console.WriteLine("train finish");
         }
         private static void SillyPlayWithSilly()
         {
-            Silly whiteSilly = new Silly(true);
+            Console.WriteLine("SillyPlayWithSilly");
+            Silly whiteSilly = new Silly();
             whiteSilly.TryRecall();
-            Silly blackSilly = new Silly(true);
+            Silly blackSilly = new Silly();
             blackSilly.NeuralNetwork = whiteSilly.NeuralNetwork;
 
             GameLogic gameLogic = new GameLogic()
@@ -136,6 +118,23 @@ namespace FiveInARow
             };
             gameLogic.PlayToEnd();
         }
-
+        private static void HumanPlayWithSilly()
+        {
+            Silly whiteSilly = new Silly();
+            whiteSilly.TryRecall();
+            GameLogic gameLogic = new GameLogic()
+            {
+                BlackChessPlayer = new HumanPlayer(),
+                WhiteChessPlayer = whiteSilly,
+            };
+            gameLogic.OneTurnFinish_Handle += () =>
+            {
+                StringBuilder stringBuilder = new StringBuilder();
+                if (gameLogic.ToOpponent(gameLogic.CurrentPlayer) is Silly silly)
+                    silly.LogEvaluation(gameLogic, stringBuilder);
+                Console.WriteLine(stringBuilder.ToString());
+            };
+            gameLogic.PlayToEnd();
+        }
     }
 }
