@@ -14,7 +14,7 @@ namespace FiveInARow
             get => m_BlackChessPlayer;
             set
             {
-                value.ChessType = ChessType.Black;
+                value.Chess = ChessType.Black;
                 m_BlackChessPlayer = value;
             }
         }
@@ -24,7 +24,7 @@ namespace FiveInARow
             get => m_WhiteChessPlayer;
             set
             {
-                value.ChessType = ChessType.White;
+                value.Chess = ChessType.White;
                 m_WhiteChessPlayer = value;
             }
         }
@@ -75,20 +75,20 @@ namespace FiveInARow
                 {
                     throw new Exception($"{CurrentPlayer} want to replace chess {Chessboard[position.Y, position.X]} at {position.X}, {position.Y}");
                 }
-                Chessboard[position.Y, position.X] = CurrentPlayer.ChessType;
+                Chessboard[position.Y, position.X] = CurrentPlayer.Chess;
                 StepRecords.Add(oneStep);
 
-                if (XYFiveInARow(CurrentPlayer.ChessType, position) || SlopeFiveInARow(CurrentPlayer.ChessType, position))
+                if (XYFiveInARow(CurrentPlayer.Chess, position) || SlopeFiveInARow(CurrentPlayer.Chess, position))
                 {
                     GameEnd = true;
-                    Winner = CurrentPlayer.ChessType;
+                    Winner = CurrentPlayer.Chess;
                 }
                 OneTurnFinish_Handle?.Invoke();
             }
             BlackChessPlayer.GameEnd(this);
             WhiteChessPlayer.GameEnd(this);
         }
-        public bool XYFiveInARow(ChessType chessType, Vector2Int position)
+        protected bool XYFiveInARow(ChessType chessType, Vector2Int position)
         {
             int count = 0;
             ChessType[,] chessboard = Chessboard;
@@ -131,7 +131,7 @@ namespace FiveInARow
 
             return false;
         }
-        public bool SlopeFiveInARow(ChessType chessType, Vector2Int position)
+        protected bool SlopeFiveInARow(ChessType chessType, Vector2Int position)
         {
             int count = 0;
             ChessType[,] chessboard = Chessboard;

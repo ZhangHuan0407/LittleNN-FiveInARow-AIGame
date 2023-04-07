@@ -8,7 +8,7 @@ namespace FiveInARow
     public class WoodenMan : IController
     {
         public Vector2Int[] Positions;
-        public ChessType ChessType { get; set; }
+        public ChessType Chess { get; set; }
 
         public WoodenMan()
         {

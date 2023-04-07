@@ -7,7 +7,7 @@ namespace FiveInARow
 {
     public class HumanPlayer : IController
     {
-        public ChessType ChessType { get; set; }
+        public ChessType Chess { get; set; }
         private StringBuilder m_LogBuilder;
 
         public HumanPlayer()
@@ -21,7 +21,7 @@ namespace FiveInARow
             gameLogic.ConvertToLogFormat(m_LogBuilder);
             Console.WriteLine(m_LogBuilder.ToString());
             Console.WriteLine();
-            Console.WriteLine($"Chess type: {ChessType}");
+            Console.WriteLine($"Chess type: {Chess}");
             Console.WriteLine($"Input position: x,y");
             string input = Console.ReadLine().Trim().Replace(" ", string.Empty);
             if (Regex.Match(input, "(?<X>[0-9]+),(?<Y>[0-9]+)") is Match match &&

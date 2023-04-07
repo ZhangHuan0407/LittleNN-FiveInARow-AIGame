@@ -7,7 +7,6 @@ namespace FiveInARow
 {
     internal static class Program
     {
-        public static bool UseLogFile;
         public static bool Infinite;
         
         [STAThread]
@@ -146,6 +145,19 @@ namespace FiveInARow
                     silly.LogEvaluation(gameLogic, stringBuilder);
                     Console.WriteLine(gameLogic.CurrentPlayer.GetType().Name);
                     Console.WriteLine(stringBuilder.ToString());
+
+                    //stringBuilder.Clear();
+                    //for (int i = 0; i < Defined.Height; i++)
+                    //{
+                    //    stringBuilder.Append(" ");
+                    //    for (int j = 0; j < Defined.Width; j++)
+                    //    {
+                    //        bool t = silly.NearlyAnyChess(gameLogic.Chessboard, j, i, ChessType.White);
+                    //        stringBuilder.Append(t).Append("  ");
+                    //    }
+                    //    stringBuilder.AppendLine();
+                    //}
+                    //Console.WriteLine(stringBuilder);
                 }
             };
             gameLogic.PlayToEnd();

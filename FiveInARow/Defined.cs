@@ -28,9 +28,10 @@ namespace FiveInARow
 
         public const float SillyMakeMistake = 0.1f;
         public const float HillMakeMistake = 0.01f;
+        public const float HillRandomAttempt = 0.15f;
         public const float HillLowExpectationRatio = 0.1f;
 
-        public const int DeepthMax = 8;
+        public const int DeepthMax = 3;
 
         public static Random Random = new Random();
     }
