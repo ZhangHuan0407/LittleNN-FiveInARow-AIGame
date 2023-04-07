@@ -2,7 +2,7 @@
 {
     public interface IController
     {
-        ChessType Chess { get; set; }
+        ChessType PlayerChessType { get; set; }
         void Play(GameLogic gameLogic, out OneStep oneStep);
         void GameEnd(GameLogic gameLogic);
     }

@@ -14,7 +14,7 @@ namespace FiveInARow
             get => m_BlackChessPlayer;
             set
             {
-                value.Chess = ChessType.Black;
+                value.PlayerChessType = ChessType.Black;
                 m_BlackChessPlayer = value;
             }
         }
@@ -24,7 +24,7 @@ namespace FiveInARow
             get => m_WhiteChessPlayer;
             set
             {
-                value.Chess = ChessType.White;
+                value.PlayerChessType = ChessType.White;
                 m_WhiteChessPlayer = value;
             }
         }
@@ -75,20 +75,20 @@ namespace FiveInARow
                 {
                     throw new Exception($"{CurrentPlayer} want to replace chess {Chessboard[position.Y, position.X]} at {position.X}, {position.Y}");
                 }
-                Chessboard[position.Y, position.X] = CurrentPlayer.Chess;
+                Chessboard[position.Y, position.X] = CurrentPlayer.PlayerChessType;
                 StepRecords.Add(oneStep);
 
-                if (XYFiveInARow(CurrentPlayer.Chess, position) || SlopeFiveInARow(CurrentPlayer.Chess, position))
+                if (XYFiveInARow(CurrentPlayer.PlayerChessType, position) || SlopeFiveInARow(CurrentPlayer.PlayerChessType, position))
                 {
                     GameEnd = true;
-                    Winner = CurrentPlayer.Chess;
+                    Winner = CurrentPlayer.PlayerChessType;
                 }
                 OneTurnFinish_Handle?.Invoke();
             }
             BlackChessPlayer.GameEnd(this);
             WhiteChessPlayer.GameEnd(this);
         }
-        protected bool XYFiveInARow(ChessType chessType, Vector2Int position)
+        public bool XYFiveInARow(ChessType chessType, Vector2Int position)
         {
             int count = 0;
             ChessType[,] chessboard = Chessboard;
@@ -131,7 +131,7 @@ namespace FiveInARow
 
             return false;
         }
-        protected bool SlopeFiveInARow(ChessType chessType, Vector2Int position)
+        public bool SlopeFiveInARow(ChessType chessType, Vector2Int position)
         {
             int count = 0;
             ChessType[,] chessboard = Chessboard;

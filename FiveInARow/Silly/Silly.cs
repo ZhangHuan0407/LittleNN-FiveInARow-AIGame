@@ -2,14 +2,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 
 namespace FiveInARow
 {
     public class Silly : IController
     {
-        public ChessType Chess { get; set; }
-        public readonly GameLogic Notebook;
+        public ChessType PlayerChessType { get; set; }
+        private readonly GameLogic m_Notebook;
         private List<Vector2Int> m_PositionList;
 
         private float[] m_SillyEvaluationCopy;
@@ -19,8 +20,8 @@ namespace FiveInARow
 
         public Silly()
         {
-            Chess = ChessType.Empty;
-            Notebook = new GameLogic();
+            PlayerChessType = ChessType.Empty;
+            m_Notebook = new GameLogic();
             m_PositionList = new List<Vector2Int>();
 
             m_SillyEvaluationCopy = new float[Defined.Size];
@@ -61,12 +62,12 @@ namespace FiveInARow
 
         internal void LogEvaluation(GameLogic gameLogic, StringBuilder stringBuilder)
         {
-            stringBuilder.AppendLine($"Evaluation {Chess}");
+            stringBuilder.AppendLine($"Evaluation {PlayerChessType}");
             stringBuilder.Append("     ");
             for (int column = 0; column < Defined.Width; column++)
                 stringBuilder.Append(column).Append("   ");
             stringBuilder.AppendLine();
-            float[] chessboard = gameLogic.ConvertToNNFormat(Chess);
+            float[] chessboard = gameLogic.ConvertToNNFormat(PlayerChessType);
             float[] evaluation = NeuralNetwork.Forward(chessboard);
             MemoryBuffer.RevertFloatArray(chessboard);
             for (int i = 0; i < evaluation.Length; i++)
@@ -99,7 +100,8 @@ namespace FiveInARow
                 oneStep = new SillyOneStep(gameLogic.RandomPickEmptyPosition(), true, true);
                 return;
             }
-            float[] chessboard = gameLogic.ConvertToNNFormat(Chess);
+            throw new NotImplementedException();
+            float[] chessboard = gameLogic.ConvertToNNFormat(PlayerChessType);
             float[] sillyEvaluation = NeuralNetwork.Forward(chessboard);
             MemoryBuffer.RevertFloatArray(chessboard);
             m_PositionList.Clear();
@@ -119,79 +121,143 @@ namespace FiveInARow
             else
                 oneStep = new SillyOneStep(gameLogic.RandomPickEmptyPosition(), false, true);
         }
-        public void LearnLastStep()
+
+        public void GameEnd(GameLogic gameLogic)
         {
-            Notebook.Repentance(out OneStep oneStep, out ChessType chessType);
-            float[] chessboard = Notebook.ConvertToNNFormat(chessType);
+            if (gameLogic.Winner == PlayerChessType)
+                return;
+            m_Notebook.Copy(gameLogic);
+            m_Notebook.Repentance(out _, out _);
+            m_Notebook.Repentance(out OneStep lastStep, out _);
+            TrainOneStep(m_Notebook);
+        }
+
+        public void TrainOneStep(GameLogic gameLogic)
+        {
+            float[] chessboard = gameLogic.ConvertToNNFormat(gameLogic.CurrentPlayer.PlayerChessType);
             float[] sillyEvaluation = NeuralNetwork.Forward(chessboard);
             MemoryBuffer.RevertFloatArray(chessboard);
-            Array.Copy(sillyEvaluation, m_SillyEvaluationCopy, sillyEvaluation.Length);
-            for (int i = 0; i < sillyEvaluation.Length; i++)
+            float[] target = new float[Defined.Size];
+            for (int row = 0; row < Defined.Height; row++)
             {
-                float evaluation = sillyEvaluation[i];
-                int row = i / Defined.Width;
-                int column = i % Defined.Width;
-                // check this position is allowed by game rule
-                if (evaluation > Defined.AIBelieveRuleAllow)
+                for (int column = 0; column < Defined.Width; column++)
                 {
-                    if (Notebook.Chessboard[row, column] != ChessType.Empty)
-                    {
-                        sillyEvaluation[i] = (evaluation + Defined.AIAbortValue) / 2f;
+                    ChessType chess = gameLogic.Chessboard[row, column];
+                    if (chess != ChessType.Empty)
                         continue;
+                    for (int xOffset = 1; xOffset < 5 && InBox(column + xOffset, row); xOffset++)
+                    {
+                        var neighborChess = gameLogic.Chessboard[row, column + xOffset];
+                        if (neighborChess == ChessType.Empty)
+                        {
+                            target[row * Defined.Width + column + xOffset] += 0.2f;
+                            break;
+                        }
+                        else if (neighborChess != chess)
+                            break;
+                    }
+                    for (int xOffset = -4; xOffset < 0 && InBox(column + xOffset, row); xOffset++)
+                    {
+                        var neighborChess = gameLogic.Chessboard[row, column + xOffset];
+                        if (neighborChess == ChessType.Empty)
+                        {
+                            target[row * Defined.Width + column + xOffset] += 0.2f;
+                            break;
+                        }
+                        else if (neighborChess != chess)
+                            break;
+                    }
+                    for (int yOffset = 1; yOffset < 5 && InBox(column, row + yOffset); yOffset++)
+                    {
+                        var neighborChess = gameLogic.Chessboard[row + yOffset, column];
+                        if (neighborChess == ChessType.Empty)
+                        {
+                            target[(row + yOffset) * Defined.Width + column] += 0.2f;
+                            break;
+                        }
+                        else if (neighborChess != chess)
+                            break;
+                    }
+                    for (int yOffset = -4; yOffset < 0 && InBox(column, row + yOffset); yOffset++)
+                    {
+                        var neighborChess = gameLogic.Chessboard[row + yOffset, column];
+                        if (neighborChess == ChessType.Empty)
+                        {
+                            target[(row + yOffset) * Defined.Width + column] += 0.2f;
+                            break;
+                        }
+                        else if (neighborChess != chess)
+                            break;
+                    }
+                    for (int xOffset = 1, yOffset = 1; xOffset < 5 && InBox(column + xOffset, row + yOffset); xOffset++, yOffset++)
+                    {
+                        var neighborChess = gameLogic.Chessboard[row + yOffset, column + xOffset];
+                        if (neighborChess == ChessType.Empty)
+                        {
+                            target[(row + yOffset) * Defined.Width + column + xOffset] += 0.2f;
+                            break;
+                        }
+                        else if (neighborChess != chess)
+                            break;
+                    }
+                    for (int xOffset = -4, yOffset = -4; xOffset < 0 && InBox(column + xOffset, row + yOffset); xOffset++, yOffset++)
+                    {
+                        var neighborChess = gameLogic.Chessboard[row, column + xOffset];
+                        if (neighborChess == ChessType.Empty)
+                        {
+                            target[(row + yOffset) * Defined.Width + column + xOffset] += 0.2f;
+                            break;
+                        }
+                        else if (neighborChess != chess)
+                            break;
+                    }
+                    for (int xOffset = 1, yOffset = 4; xOffset < 5 && InBox(column + xOffset, row + yOffset); xOffset++, yOffset--)
+                    {
+                        var neighborChess = gameLogic.Chessboard[row + yOffset, column + xOffset];
+                        if (neighborChess == ChessType.Empty)
+                        {
+                            target[(row + yOffset) * Defined.Width + column + xOffset] += 0.2f;
+                            break;
+                        }
+                        else if (neighborChess != chess)
+                            break;
+                    }
+                    for (int xOffset = -4, yOffset = -1; xOffset < 0 && InBox(column + xOffset, row + yOffset); xOffset++, yOffset--)
+                    {
+                        var neighborChess = gameLogic.Chessboard[row, column + xOffset];
+                        if (neighborChess == ChessType.Empty)
+                        {
+                            target[(row + yOffset) * Defined.Width + column + xOffset] += 0.2f;
+                            break;
+                        }
+                        else if (neighborChess != chess)
+                            break;
+                    }
+                    static bool InBox(int cooX, int cooY)
+                    {
+                        return cooX >= 0 && cooX < Defined.Width && cooY >= 0 && cooY < Defined.Height;
                     }
                 }
-                bool nearlyAnyChess = NearlyAnyChess(Notebook.Chessboard, column, row, chessType);
-                if (nearlyAnyChess)
+            }
+            for (int row = 0; row < Defined.Height; row++)
+            {
+                for (int column = 0; column < Defined.Width; column++)
                 {
-                    if (evaluation < Defined.AIBelieveRuleAllow)
-                        sillyEvaluation[i] = evaluation + Defined.AIBelieveRuleAllow;
-                }
-                else
-                {
-                    if (evaluation > Defined.AIBelieveRuleAllow)
-                        sillyEvaluation[i] = (evaluation + Defined.AIBelieveRuleAllow) / 2f;
+                    ChessType chess = gameLogic.Chessboard[row, column];
+                    int index = row * Defined.Width + column;
+                    float value = target[index];
+                    if (chess == ChessType.Empty)
+                    {
+                        value += Defined.AIBelieveRuleAllow;
+                        target[index] = Math.Min(value, 1f);
+                    }
                 }
             }
-            Vector2Int chessPosition = oneStep.Position;
-            float value = sillyEvaluation[chessPosition.Y * Defined.Width + chessPosition.X];
-            if (value < Defined.AIChooseValue)
-                sillyEvaluation[chessPosition.Y * Defined.Width + chessPosition.X] = (value + Defined.PickValue) / 2f;
-            LastLoss = LossFuntion.MSELoss(m_SillyEvaluationCopy, sillyEvaluation);
-            NeuralNetwork.OptimizerBackward(sillyEvaluation);
+            LastLoss = LossFuntion.MSELoss(sillyEvaluation, target);
+            NeuralNetwork.OptimizerBackward(target);
             NeuralNetwork.OptimizerStep();
             if (m_TrainTimes++ > 30000)
                 SaveMemory();
-        }
-        private bool NearlyAnyChess(ChessType[,] chessboard, int column, int row, ChessType chessType)
-        {
-            return HasChess(column - 1, row - 1) ||
-                   HasChess(column, row - 1) ||
-                   HasChess(column + 1, row - 1) ||
-                   HasChess(column - 1, row) ||
-                   HasChess(column + 1, row) ||
-                   HasChess(column - 1, row + 1) ||
-                   HasChess(column, row + 1) ||
-                   HasChess(column + 1, row + 1) ||
-                   HasChess(column - 2, row - 2) ||
-                   HasChess(column, row - 2) ||
-                   HasChess(column + 2, row - 2) ||
-                   HasChess(column - 2, row) ||
-                   HasChess(column + 2, row) ||
-                   HasChess(column - 2, row + 2) ||
-                   HasChess(column, row + 2) ||
-                   HasChess(column + 2, row + 2);
-
-            bool HasChess(int column2, int row2)
-            {
-                if (column2 > 0 && column2 < chessboard.GetLength(1) &&
-                    row2 > 0 && row2 < chessboard.GetLength(0))
-                    return chessboard[row2, column2] == chessType;
-                else
-                    return false;
-            }
-        }
-        public void GameEnd(GameLogic gameLogic)
-        {
         }
     }
 }

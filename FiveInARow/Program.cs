@@ -72,12 +72,9 @@ namespace FiveInARow
                     whiteWoodenMan.Positions = wrapper.whitePositions;
                     gameLogic.OneTurnFinish_Handle += () =>
                     {
-                        // Learn white chess only and ignore white chess first step
-                        if (gameLogic.StepRecords.Count % 2 == 0 &&
-                            gameLogic.StepRecords.Count > 1)
+                        if (gameLogic.Winner == ChessType.Empty)
                         {
-                            silly.Notebook.Copy(gameLogic);
-                            silly.LearnLastStep();
+                            silly.TrainOneStep(gameLogic);
                             lossTotal += silly.LastLoss;
                             trainCount++;
                         }
