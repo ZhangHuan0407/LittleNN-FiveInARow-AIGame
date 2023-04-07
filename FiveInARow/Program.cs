@@ -15,6 +15,7 @@ namespace FiveInARow
         {
             ReadArguments(args);
             WoodenManTrainSilly();
+            //HumanPlayWithSilly();
             //SillyPlayWithSilly();
         }
 
@@ -110,10 +111,13 @@ namespace FiveInARow
                 gameLogic.ConvertToLogFormat(stringBuilder);
                 Console.WriteLine(stringBuilder.ToString());
                 Console.WriteLine();
-                stringBuilder.Clear();
                 if (gameLogic.ToOpponent(gameLogic.CurrentPlayer) is Silly silly)
+                {
+                    Console.WriteLine(silly.GetType().Name);
+                    stringBuilder.Clear();
                     silly.LogEvaluation(gameLogic, stringBuilder);
-                Console.WriteLine(stringBuilder.ToString());
+                    Console.WriteLine(stringBuilder.ToString());
+                }
                 Console.ReadLine();
             };
             gameLogic.PlayToEnd();
@@ -129,10 +133,13 @@ namespace FiveInARow
             };
             gameLogic.OneTurnFinish_Handle += () =>
             {
-                StringBuilder stringBuilder = new StringBuilder();
                 if (gameLogic.ToOpponent(gameLogic.CurrentPlayer) is Silly silly)
+                {
+                    StringBuilder stringBuilder = new StringBuilder();
                     silly.LogEvaluation(gameLogic, stringBuilder);
-                Console.WriteLine(stringBuilder.ToString());
+                    Console.WriteLine(gameLogic.CurrentPlayer.GetType().Name);
+                    Console.WriteLine(stringBuilder.ToString());
+                }
             };
             gameLogic.PlayToEnd();
         }

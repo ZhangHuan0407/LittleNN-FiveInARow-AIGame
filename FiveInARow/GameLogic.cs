@@ -76,7 +76,7 @@ namespace FiveInARow
                 Chessboard[position.Y, position.X] = CurrentPlayer.ChessType;
                 ChessRecords.Add(position);
 
-                if (XYFiveInARow(position) || SlopeFiveInARow(position))
+                if (XYFiveInARow(CurrentPlayer.ChessType, position) || SlopeFiveInARow(CurrentPlayer.ChessType, position))
                 {
                     GameEnd = true;
                     Winner = CurrentPlayer.ChessType;
@@ -86,11 +86,10 @@ namespace FiveInARow
             BlackChessPlayer.GameEnd(this);
             WhiteChessPlayer.GameEnd(this);
         }
-        private bool XYFiveInARow(Vector2Int position)
+        public bool XYFiveInARow(ChessType chessType, Vector2Int position)
         {
             int count = 0;
             ChessType[,] chessboard = Chessboard;
-            ChessType chessType = chessboard[position.Y, position.X];
             for (int x = position.X + 1; x < chessboard.GetLength(1); x++)
             {
                 if (chessboard[position.Y, x] == chessType)
@@ -130,11 +129,10 @@ namespace FiveInARow
 
             return false;
         }
-        private bool SlopeFiveInARow(Vector2Int position)
+        public bool SlopeFiveInARow(ChessType chessType, Vector2Int position)
         {
             int count = 0;
             ChessType[,] chessboard = Chessboard;
-            ChessType chessType = chessboard[position.Y, position.X];
             int x, y;
             for (x = position.X + 1, y = position.Y + 1; x < chessboard.GetLength(1) && y < chessboard.GetLength(0); x++, y++)
             {
@@ -235,8 +233,8 @@ namespace FiveInARow
                         else if (chessType == opponentChessType)
                             opponentChessCount++;
                     }
-                    value[offset++] = aiChessCount / 4f;
-                    value[offset++] = opponentChessCount / 4f;
+                    value[offset++] = opponentChessCount == 0 ? aiChessCount / 4f : 0f;
+                    value[offset++] = aiChessCount == 0 ? opponentChessCount / 4f : 0f;
                 }
             for (int row = 0; row < Defined.Height; row++)
                 for (int column = 0; column < Defined.Width - 5 + 1; column++)
@@ -251,8 +249,8 @@ namespace FiveInARow
                         else if (chessType == opponentChessType)
                             opponentChessCount++;
                     }
-                    value[offset++] = aiChessCount / 4f;
-                    value[offset++] = opponentChessCount / 4f;
+                    value[offset++] = opponentChessCount == 0 ? aiChessCount / 4f : 0f;
+                    value[offset++] = aiChessCount == 0 ? opponentChessCount / 4f : 0f;
                 }
             // five in slope
             for (int row = 0; row < Defined.Height - 5 + 1; row++)
@@ -268,8 +266,8 @@ namespace FiveInARow
                         else if (chessType == opponentChessType)
                             opponentChessCount++;
                     }
-                    value[offset++] = aiChessCount / 4f;
-                    value[offset++] = opponentChessCount / 4f;
+                    value[offset++] = opponentChessCount == 0 ? aiChessCount / 4f : 0f;
+                    value[offset++] = aiChessCount == 0 ? opponentChessCount / 4f : 0f;
                 }
             for (int row = 0; row < Defined.Height - 5 + 1; row++)
                 for (int column = 0; column < Defined.Width - 5 + 1; column++)
@@ -284,8 +282,8 @@ namespace FiveInARow
                         else if (chessType == opponentChessType)
                             opponentChessCount++;
                     }
-                    value[offset++] = aiChessCount / 4f;
-                    value[offset++] = opponentChessCount / 4f;
+                    value[offset++] = opponentChessCount == 0 ? aiChessCount / 4f : 0f;
+                    value[offset++] = aiChessCount == 0 ? opponentChessCount / 4f : 0f;
                 }
             if (offset != Defined.NNInputSize || offset != value.Length)
                 throw new ArgumentException("nn format error");

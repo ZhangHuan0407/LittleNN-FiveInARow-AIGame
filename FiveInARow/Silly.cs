@@ -14,11 +14,13 @@ namespace FiveInARow
         public float LastLoss;
         public NeuralNetwork NeuralNetwork;
         public readonly GameLogic Notebook;
+        private List<Vector2Int> m_PositionList;
 
         public Silly()
         {
             Notebook = new GameLogic();
             m_SillyEvaluationCopy = new float[Defined.Size];
+            m_PositionList = new List<Vector2Int>();
         }
 
         public void TryRecall()
@@ -63,10 +65,20 @@ namespace FiveInARow
             {
                 int row = i / Defined.Width;
                 int column = i % Defined.Width;
-                int value = (int)MathF.Floor(evaluation[i] * 100f);
                 if (column == 0)
                     stringBuilder.Append(row).Append("  ");
-                stringBuilder.Append(value.ToString().PadLeft(3)).Append(" ");
+                float pValue = evaluation[i];
+                if (pValue < Defined.AIChooseValue)
+                {
+                    string content = ((int)MathF.Floor(pValue * 10f)).ToString();
+                    stringBuilder.Append(("." + content).PadLeft(3));
+                }
+                else
+                {
+                    string content = ((int)MathF.Floor(pValue * 100f)).ToString();
+                    stringBuilder.Append(content.PadLeft(3));
+                }
+                stringBuilder.Append(" ");
                 if (column == Defined.Width - 1)
                     stringBuilder.AppendLine();
             }
@@ -74,28 +86,30 @@ namespace FiveInARow
 
         public void Play(GameLogic gameLogic, out Vector2Int position)
         {
+            if (Defined.Random.NextDouble() < Defined.SillyMakeMistake)
+            {
+                position = gameLogic.RandomPickEmptyPosition();
+                return;
+            }
             float[] chessboard = gameLogic.ConvertToNNFormat(ChessType);
-            position = new Vector2Int(-1, -1); // just for compile...
             float[] sillyEvaluation = NeuralNetwork.Forward(chessboard);
             ArrayBuffer.Revert(chessboard);
-            float maxEvaluation = 0f;
+            m_PositionList.Clear();
             for (int i = 0; i < sillyEvaluation.Length; i++)
             {
-                if (sillyEvaluation[i] < maxEvaluation)
+                if (sillyEvaluation[i] < Defined.AIChooseValue)
                     continue;
                 int row = i / Defined.Width;
                 int column = i % Defined.Width;
                 if (gameLogic.Chessboard[row, column] != ChessType.Empty)
                     continue;
-                maxEvaluation = sillyEvaluation[i];
-                position.X = column;
-                position.Y = row;
+                m_PositionList.Add(new Vector2Int(column, row));
             }
 
-            if (position.X == -1)
-            {
+            if (m_PositionList.Count > 0)
+                position = m_PositionList[Defined.Random.Next() % m_PositionList.Count];
+            else
                 position = gameLogic.RandomPickEmptyPosition();
-            }
         }
         public void LearnLastStep()
         {
@@ -107,7 +121,7 @@ namespace FiveInARow
             for (int i = 0; i < sillyEvaluation.Length; i++)
             {
                 // check this position is allowed by game rule
-                if (sillyEvaluation[i] > Defined.AIBelieveSelf)
+                if (sillyEvaluation[i] > Defined.AIBelieveRuleAllow)
                 {
                     int row = i / Defined.Width;
                     int column = i % Defined.Width;
