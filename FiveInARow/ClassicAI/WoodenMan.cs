@@ -8,12 +8,11 @@ namespace FiveInARow
     public class WoodenMan : IController
     {
         public Vector2Int[] Positions;
+        public ChessType ChessType { get; set; }
 
         public WoodenMan()
         {
         }
-
-        public ChessType ChessType { get; set; }
 
         public void Play(GameLogic gameLogic, out OneStep oneStep)
         {
@@ -44,8 +43,8 @@ namespace FiveInARow
                         whitePositions[i] = new Vector2Int(column, row + i);
                         buffer[(row + i) * Defined.Width + column] = true;
                     }
-                    Shuffle(whitePositions);
-                    Vector2Int[] blackPositions = RandomBlackList();
+                    ShuffleWhiteList(whitePositions);
+                    Vector2Int[] blackPositions = RandomBlackList(6);
                     yield return (blackPositions, whitePositions);
                 }
 
@@ -64,8 +63,8 @@ namespace FiveInARow
                         whitePositions[i] = new Vector2Int(column + i, row);
                         buffer[row * Defined.Width + column + i] = true;
                     }
-                    Shuffle(whitePositions);
-                    Vector2Int[] blackPositions = RandomBlackList();
+                    ShuffleWhiteList(whitePositions);
+                    Vector2Int[] blackPositions = RandomBlackList(6);
                     yield return (blackPositions, whitePositions);
                 }
 
@@ -84,8 +83,8 @@ namespace FiveInARow
                         whitePositions[i] = new Vector2Int(column + i, row + i);
                         buffer[(row + i) * Defined.Width + column + i] = true;
                     }
-                    Shuffle(whitePositions);
-                    Vector2Int[] blackPositions = RandomBlackList();
+                    ShuffleWhiteList(whitePositions);
+                    Vector2Int[] blackPositions = RandomBlackList(6);
                     yield return (blackPositions, whitePositions);
                 }
 
@@ -104,15 +103,15 @@ namespace FiveInARow
                         whitePositions[i] = new Vector2Int(column + 4 - i, row + i);
                         buffer[(row + i) * Defined.Width + column + 4 - i] = true;
                     }
-                    Shuffle(whitePositions);
-                    Vector2Int[] blackPositions = RandomBlackList();
+                    ShuffleWhiteList(whitePositions);
+                    Vector2Int[] blackPositions = RandomBlackList(6);
                     yield return (blackPositions, whitePositions);
                 }
 
-            Vector2Int[] RandomBlackList()
+            Vector2Int[] RandomBlackList(int length)
             {
                 int blackIndex = 0;
-                Vector2Int[] result = new Vector2Int[6];
+                Vector2Int[] result = new Vector2Int[length];
                 while (blackIndex < result.Length)
                 {
                     int randomValue = Defined.Random.Next() % Defined.Size;
@@ -126,15 +125,14 @@ namespace FiveInARow
                 }
                 return result;
             }
-            void Shuffle(Vector2Int[] array)
+            void ShuffleWhiteList(Vector2Int[] array)
             {
-                for (int i = 0; i < array.Length - 1; i++)
-                {
-                    int swapTarget = Defined.Random.Next() % array.Length;
-                    Vector2Int temp = array[swapTarget];
-                    array[swapTarget] = array[i];
-                    array[i] = temp;
-                }
+                int randomValue = Defined.Random.Next() % array.Length;
+                if (randomValue == array.Length - 1)
+                    return;
+                Vector2Int temp = array[randomValue];
+                array[randomValue] = array[randomValue + 1];
+                array[randomValue + 1] = temp;
             }
         }
 
@@ -159,6 +157,10 @@ namespace FiveInARow
                     gameLogic.PlayToEnd();
                     stringBuilder.Clear();
                     gameLogic.ConvertToLogFormat(stringBuilder);
+                    for (int i = 0; i < whitePositions.Length; i++)
+                        stringBuilder.Append(whitePositions[i]).Append("\t");
+                    stringBuilder.AppendLine();
+                    stringBuilder.AppendLine();
                     byte[] bytes = Encoding.UTF8.GetBytes(stringBuilder.ToString());
                     stream.Write(bytes, 0, bytes.Length);
                 }

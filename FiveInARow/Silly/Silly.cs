@@ -29,13 +29,14 @@ namespace FiveInARow
             NeuralNetwork = null;
         }
 
-        public void TryRecall()
+        public bool TryRecall()
         {
             string path = Path.Combine(Defined.ModelDirectory, "Silly.bin");
             if (File.Exists(path))
             {
                 NeuralNetwork = NeuralNetwork.LoadFrom(path);
-                Console.WriteLine("load nn model at: " + path);
+                Console.WriteLine("load Silly nn model at: " + path);
+                return true;
             }
             else
             {
@@ -48,7 +49,8 @@ namespace FiveInARow
                 sequential.Add(Sequential.Activation("sigmoid link", ActivationsFunctionType.Sigmoid));
                 sequential.Add(Sequential.Neural("output layer", Defined.Size));
                 NeuralNetwork = new NeuralNetwork(sequential, 0.02f, 0.75f);
-                Console.WriteLine("create new nn model");
+                Console.WriteLine("create new Silly nn model");
+                return false;
             }
         }
         public void SaveMemory()
@@ -132,7 +134,9 @@ namespace FiveInARow
                     int row = i / Defined.Width;
                     int column = i % Defined.Width;
                     if (Notebook.Chessboard[row, column] != ChessType.Empty)
-                        sillyEvaluation[i] = (Defined.AIAbortValue + sillyEvaluation[i]) / 2f;
+                        sillyEvaluation[i] = (sillyEvaluation[i] + Defined.AIAbortValue) / 2f;
+                    else if (!NearlyAnyChess(Notebook.Chessboard, column, row, chessType))
+                        sillyEvaluation[i] = (sillyEvaluation[i] + Defined.AIAbortValue) / 2f;
                 }
             }
             Vector2Int chessPosition = oneStep.Position;
@@ -144,6 +148,34 @@ namespace FiveInARow
             NeuralNetwork.OptimizerStep();
             if (m_TrainTimes++ > 30000)
                 SaveMemory();
+        }
+        private bool NearlyAnyChess(ChessType[,] chessboard, int column, int row, ChessType chessType)
+        {
+            return HasChess(column - 1, row - 1) ||
+                   HasChess(column, row - 1) ||
+                   HasChess(column + 1, row - 1) ||
+                   HasChess(column - 1, row) ||
+                   HasChess(column + 1, row) ||
+                   HasChess(column - 1, row + 1) ||
+                   HasChess(column, row + 1) ||
+                   HasChess(column + 1, row + 1) ||
+                   HasChess(column - 2, row - 2) ||
+                   HasChess(column, row - 2) ||
+                   HasChess(column + 2, row - 2) ||
+                   HasChess(column - 2, row) ||
+                   HasChess(column + 2, row) ||
+                   HasChess(column - 2, row + 2) ||
+                   HasChess(column, row + 2) ||
+                   HasChess(column + 2, row + 2);
+
+            bool HasChess(int column2, int row2)
+            {
+                if (column2 > 0 && column2 < chessboard.GetLength(1) &&
+                    row2 > 0 && row2 < chessboard.GetLength(0))
+                    return chessboard[row2, column2] == chessType;
+                else
+                    return false;
+            }
         }
         public void GameEnd(GameLogic gameLogic)
         {
